@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión - Gestor de Casos</title>
+
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #0F172B 0%, #1E2A47 100%);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    .login-card {
+      background: white;
+      width: 380px;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0px 8px 20px rgba(0,0,0,0.2);
+      animation: fadeIn 0.6s ease;
+    }
+
+    .login-title {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #0F172B;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .btn-primary {
+      background-color: #0F172B;
+      border: none;
+      transition: 0.3s;
+    }
+
+    .btn-primary:hover {
+      background-color: #e76920;
+    }
+
+    .logo {
+      width: 90px;
+      display: block;
+      margin: 0 auto 15px auto;
+      filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.15));
+    }
+
+    #error {
+      color: red;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-card">
+
+    <img src="https://cdn-icons-png.flaticon.com/512/6681/6681204.png" class="logo">
+
+    <h2 class="login-title">Gestor de Casos</h2>
+
+    <p id="error"></p>
+
+    <div class="mb-3">
+      <label class="form-label">Correo</label>
+      <input type="email" id="correo" class="form-control" placeholder="Ingrese su correo">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Contraseña</label>
+      <input type="password" id="password" class="form-control" placeholder="••••••••">
+    </div>
+
+    <button class="btn btn-primary w-100" onclick="login()">Iniciar Sesión</button>
+
+  </div>
+
+  <script>
+    async function login() {
+      const correo = document.getElementById("correo").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!correo || !password) {
+        document.getElementById("error").innerText = "Complete ambos campos.";
+        return;
+      }
+
+      const res = await fetch("http://localhost:4000/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        document.getElementById("error").innerText = data.mensaje;
+        return;
+      }
+
+      // Guardar token
+      localStorage.setItem("token", data.token);
+
+      // Redirigir al sistema
+      window.location.href = "index.html";
+    }
+  </script>
+
+</body>
+</html>

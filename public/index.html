@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestor de Casos - CCSS</title>
+
+  <!-- VALIDAR TOKEN ANTES DE CARGAR LA PÁGINA -->
+  <script>
+    if (!localStorage.getItem("token")) {
+      window.location.href = "login.html";
+    }
+  </script>
+
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <style>
+    body { background-color: #f5f7fa; }
+    .navbar-brand { font-weight: bold; font-size: 1.4rem; }
+    .card { border-radius: 10px; }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+      <span class="navbar-brand">Gestor de Casos - CCSS</span>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- FORMULARIO -->
+    <div class="card shadow mb-4">
+      <div class="card-body">
+        <h3 class="text-primary">Registrar Caso</h3>
+
+        <form id="formCaso" class="mt-3">
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Número de Caso</label>
+              <input id="numeroCaso" class="form-control" required />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Nombre del Patrono</label>
+              <input id="nombrePatrono" class="form-control" required />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Tipo de Investigación</label>
+              <select id="tipoInvestigacion" class="form-select" required>
+                <option value="">Seleccione...</option>
+                <option>Inscripción Patronal</option>
+                <option>Reanudación Patronal</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Zona</label>
+              <select id="zona" class="form-select" required>
+                <option value="">Seleccione...</option>
+                <option>Pavas</option>
+                <option>Montes de Oca</option>
+                <option>Tibás</option>
+                <option>San Sebastián</option>
+                <option>Uruca</option>
+              </select>
+            </div>
+
+            <!-- INSPECTOR -->
+            <div class="col-md-6">
+              <label class="form-label">Inspector</label>
+              <select id="inspectorNombre" class="form-select" required></select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Correo del Inspector</label>
+              <input id="inspectorCorreo" class="form-control" disabled />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Fecha Asignado</label>
+              <input id="fechaAsignado" type="date" class="form-control" required />
+            </div>
+          </div>
+
+          <button class="btn btn-primary w-100 mt-4">Guardar Caso</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="card p-3 mb-3 bg-white border">
+      <div class="row g-3">
+
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Filtrar por Estado</label>
+          <select id="filtroEstado" class="form-select">
+            <option value="">Todos</option>
+            <option>Pendiente</option>
+            <option>Resuelto</option>
+            <option>Sectorizado</option>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Filtrar por Vía Administrativa</label>
+          <select id="filtroVia" class="form-select">
+            <option value="">Todos</option>
+            <option>Procedente</option>
+            <option>Improcedente</option>
+          </select>
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end">
+          <button class="btn btn-primary w-100" onclick="filtrarCasos()">Aplicar Filtros</button>
+        </div>
+
+      </div>
+
+      <div class="row mt-3">
+        <div class="col-md-12">
+          <button class="btn btn-secondary w-100" onclick="limpiarFiltros()">
+            Limpiar Filtros
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTA DE CASOS -->
+    <div class="card shadow">
+      <div class="card-body">
+        <h3 class="text-primary">Casos Registrados</h3>
+
+        <table class="table table-bordered table-striped mt-3">
+          <thead class="table-primary">
+            <tr>
+              <th>ID</th>
+              <th>Número Caso</th>
+              <th>Patrono</th>
+              <th>Tipo</th>
+              <th>Zona</th>
+              <th>Inspector</th>
+              <th>Estado</th>
+              <th>Vía Adm.</th>
+              <th>Fecha Asignado</th>
+              <th>Fecha Resuelto</th>
+              <th>Días Hábiles</th>
+              <th>N° Resolución</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="listaCasos"></tbody>
+        </table>
+
+        <!-- PAGINACIÓN -->
+        <div class="mt-3 text-center">
+          <button class="btn btn-secondary me-3" onclick="paginaAnterior()">Anterior</button>
+          Página <span id="paginaActual">1</span> de 
+          <span id="totalPaginas">1</span>
+          <button class="btn btn-secondary ms-3" onclick="paginaSiguiente()">Siguiente</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL EDITAR -->
+  <div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Actualizar Caso</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <form id="formEditar">
+
+            <input type="hidden" id="editId">
+
+            <div class="mb-3">
+              <label class="form-label">Vía Administrativa</label>
+              <select id="editVia" class="form-select">
+                <option value="">Seleccione...</option>
+                <option>Procedente</option>
+                <option>Improcedente</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Número Resolución</label>
+              <input id="editResolucion" class="form-control" />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Estado</label>
+              <select id="editEstado" class="form-select">
+                <option>Pendiente</option>
+                <option>Resuelto</option>
+                <option>Sectorizado</option>
+              </select>
+            </div>
+
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" onclick="guardarCambios()">Guardar Cambios</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="main.js"></script>
+
+</body>
+</html>
