@@ -3,21 +3,21 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ===============================
-// CONFIGURACIÓN
+// CONFIGURACIÓN (Render)
 // ===============================
-const API = "http://localhost:4000/casos";
-const API_INSPECTORES = "http://localhost:4000/inspectores";
+const API_BASE = "https://gestor-de-casos.onrender.com";
+const API = `${API_BASE}/casos`;
+const API_INSPECTORES = `${API_BASE}/inspectores`;
 
 let paginaActual = 1;
 let totalPaginas = 1;
 const LIMITE = 10;
 
-// 🔥 NECESARIO: token correctamente definido SIN duplicarlo
+// Token correcto
 let token = localStorage.getItem("token");
 
-
 // ===============================
-// FUNCIÓN GENÉRICA PARA FETCH CON TOKEN
+// FETCH con Token
 // ===============================
 async function fetchConToken(url, options = {}) {
   options.headers = {
@@ -73,6 +73,7 @@ document.getElementById("formCaso").addEventListener("submit", async (e) => {
     tipoInvestigacion: document.getElementById("tipoInvestigacion").value,
     zona: document.getElementById("zona").value,
     inspector: document.getElementById("inspectorNombre").value,
+    fechaAsignado: document.getElementById("fechaAsignado").value
   };
 
   const res = await fetchConToken(API, {
@@ -100,7 +101,7 @@ function formatearFecha(f) {
 }
 
 // ===============================
-// PINTAR TABLA
+// TABLA
 // ===============================
 function pintarTabla(lista) {
   const tbody = document.getElementById("listaCasos");
@@ -132,7 +133,7 @@ function pintarTabla(lista) {
 }
 
 // ===============================
-// CARGAR CASOS (PAGINACIÓN)
+// PAGINACIÓN
 // ===============================
 async function cargarCasos(page = 1) {
   const res = await fetchConToken(`${API}?page=${page}&limit=${LIMITE}`);
@@ -146,9 +147,6 @@ async function cargarCasos(page = 1) {
   actualizarControlesPaginacion();
 }
 
-// ===============================
-// CONTROLES DE PAGINACIÓN
-// ===============================
 function paginaAnterior() {
   if (paginaActual > 1) cargarCasos(paginaActual - 1);
 }
@@ -163,7 +161,7 @@ function actualizarControlesPaginacion() {
 }
 
 // ===============================
-// ABRIR MODAL DE EDICIÓN
+// EDITAR CASO
 // ===============================
 async function abrirEditar(id) {
   const res = await fetchConToken(`${API}/${id}`);
@@ -178,9 +176,6 @@ async function abrirEditar(id) {
   modal.show();
 }
 
-// ===============================
-// GUARDAR CAMBIOS
-// ===============================
 async function guardarCambios() {
   const id = document.getElementById("editId").value;
 
@@ -204,9 +199,7 @@ async function guardarCambios() {
   alert("Cambios guardados correctamente");
   cargarCasos(paginaActual);
 
-  const modal = bootstrap.Modal.getInstance(
-    document.getElementById("modalEditar")
-  );
+  const modal = bootstrap.Modal.getInstance(document.getElementById("modalEditar"));
   modal.hide();
 }
 
@@ -214,15 +207,10 @@ async function guardarCambios() {
 // ELIMINAR CASO
 // ===============================
 async function eliminarCaso(id) {
-  const confirmar = confirm(
-    "¿Seguro que desea eliminar este caso? Esta acción no se puede deshacer."
-  );
-
+  const confirmar = confirm("¿Seguro que desea eliminar este caso?");
   if (!confirmar) return;
 
-  const res = await fetchConToken(`${API}/${id}`, {
-    method: "DELETE",
-  });
+  const res = await fetchConToken(`${API}/${id}`, { method: "DELETE" });
 
   if (!res.ok) {
     const error = await res.json();
