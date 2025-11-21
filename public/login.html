@@ -92,36 +92,36 @@
 
   </div>
 
-  <script>
-    async function login() {
-      const correo = document.getElementById("correo").value.trim();
-      const password = document.getElementById("password").value.trim();
+ <script>
+  async function login() {
+    const correo = document.getElementById("correo").value.trim();
+    const password = document.getElementById("password").value.trim();
 
-      if (!correo || !password) {
-        document.getElementById("error").innerText = "Complete ambos campos.";
-        return;
-      }
-
-      const res = await fetch("http://localhost:4000/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ correo, password })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        document.getElementById("error").innerText = data.mensaje;
-        return;
-      }
-
-      // Guardar token
-      localStorage.setItem("token", data.token);
-
-      // Redirigir al sistema
-      window.location.href = "index.html";
+    if (!correo || !password) {
+      document.getElementById("error").innerText = "Complete ambos campos.";
+      return;
     }
-  </script>
+
+    const res = await fetch("https://gestor-de-casos.onrender.com/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo, contrasena: password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      document.getElementById("error").innerText = data.mensaje || "Error en el inicio de sesión";
+      return;
+    }
+
+    // Guardar token
+    localStorage.setItem("token", data.token);
+
+    // Redirigir al sistema
+    window.location.href = "index.html";
+  }
+</script>
 
 </body>
 </html>
