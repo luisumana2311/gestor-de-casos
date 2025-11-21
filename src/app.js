@@ -1,33 +1,35 @@
+require("dotenv").config();
+
 const express = require("express");
+const cors = require("cors");
 const path = require("path");
+
 const app = express();
 
+// CORS para Render
+app.use(cors());
 app.use(express.json());
 
-// ----------------------------
-// SERVIR FRONTEND ESTÁTICO
-// ----------------------------
-app.use(express.static(path.join(__dirname, "..", "frontend")));
+// Conexión a MongoDB
+const conectarDB = require("./src/config/db");
+conectarDB();
+
+// Servir carpeta public (Frontend)
+app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "frontend", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
-// ----------------------------
-// RUTAS DE API
-// ----------------------------
+// Rutas API
+app.use("/auth", require("./src/routes/authRoutes"));
+app.use("/casos", require("./src/routes/casosRoutes"));
+app.use("/inspectores", require("./src/routes/inspectoresRoutes"));
 
-// Casos
-const casosRoutes = require("./routes/casosRoutes");
-app.use("/casos", casosRoutes);
+// Puerto dinámico de Render
+const PORT = process.env.PORT || 4000;
 
-// Inspectores
-const inspectoresRoutes = require("./routes/inspectoresRoutes");
-app.use("/inspectores", inspectoresRoutes);
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+});
 
-// ----------------------------
-
-module.exports = app;
-const authRoutes = require("./routes/authRoutes");
-
-app.use("/auth", authRoutes);
