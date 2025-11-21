@@ -1,3 +1,15 @@
+// ===============================
+// PROTECCIÓN DE RUTA (Render)
+// ===============================
+let token = localStorage.getItem("token");
+
+if (!token) {
+  window.location.href = "login.html";
+}
+
+// ===============================
+// INICIALIZACIÓN CUANDO CARGA EL DOM
+// ===============================
 document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
 });
@@ -12,9 +24,6 @@ const API_INSPECTORES = `${API_BASE}/inspectores`;
 let paginaActual = 1;
 let totalPaginas = 1;
 const LIMITE = 10;
-
-// Token correcto
-let token = localStorage.getItem("token");
 
 // ===============================
 // FETCH con Token
@@ -64,7 +73,7 @@ async function cargarInspectores() {
 // ===============================
 // REGISTRAR CASO
 // ===============================
-document.getElementById("formCaso").addEventListener("submit", async (e) => {
+document.getElementById("formCaso")?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const caso = {
