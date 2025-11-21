@@ -92,7 +92,7 @@
 
   </div>
 
- <script>
+<script>
   async function login() {
     const correo = document.getElementById("correo").value.trim();
     const password = document.getElementById("password").value.trim();
@@ -104,17 +104,17 @@
 
     const API_BASE = "https://gestor-de-casos.onrender.com";
 
-const res = await fetch(`${API_BASE}/auth/login`, {
-
+    const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ correo, contrasena: password })
+      body: JSON.stringify({ correo, password })  // ← CORREGIDO
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      document.getElementById("error").innerText = data.mensaje || "Error en el inicio de sesión";
+      document.getElementById("error").innerText =
+        data.mensaje || "Error en el inicio de sesión";
       return;
     }
 
@@ -128,3 +128,4 @@ const res = await fetch(`${API_BASE}/auth/login`, {
 
 </body>
 </html>
+
