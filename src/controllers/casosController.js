@@ -4,16 +4,12 @@ const calcularDiasHabiles = require("../utils/calcularDiasHabiles");
 const feriados = require("../utils/feriados");
 const nodemailer = require("nodemailer");
 
-// -----------------------------
-// VALIDACIONES
-// -----------------------------
+// ======================================================
+// CONFIGURACIÓN DE CORREO
+// ======================================================
 
-const zonasValidas = ["Pavas", "Montes de Oca", "Tibás", "San Sebastián", "Uruca"];
-const tiposValidos = ["Inscripción Patronal", "Reanudación Patronal"];
-
-// -----------------------------
-// TRANSPORT EMAIL (MODO PRUEBA)
-// -----------------------------
+// Cambiar a false para enviar correos reales
+const TEST_MODE = false;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -23,9 +19,16 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// -----------------------------
+// ======================================================
+// VALIDACIONES
+// ======================================================
+
+const zonasValidas = ["Pavas", "Montes de Oca", "Tibás", "San Sebastián", "Uruca"];
+const tiposValidos = ["Inscripción Patronal", "Reanudación Patronal"];
+
+// ======================================================
 // OBTENER TODOS LOS CASOS
-// -----------------------------
+// ======================================================
 
 const obtenerCasos = async (req, res) => {
   try {
@@ -37,9 +40,9 @@ const obtenerCasos = async (req, res) => {
   }
 };
 
-// -----------------------------
+// ======================================================
 // OBTENER CASO POR ID
-// -----------------------------
+// ======================================================
 
 const obtenerCasoPorId = async (req, res) => {
   try {
@@ -55,9 +58,9 @@ const obtenerCasoPorId = async (req, res) => {
   }
 };
 
-// -----------------------------
-// CREAR CASO
-// -----------------------------
+// ======================================================
+// CREAR CASO + ENVÍO DE CORREO
+// ======================================================
 
 const crearCaso = async (req, res) => {
   try {
@@ -73,21 +76,18 @@ const crearCaso = async (req, res) => {
       return res.status(400).json({ error: "Todos los campos obligatorios deben completarse." });
     }
 
-    // Validación de zona
     if (!zonasValidas.includes(zona)) {
       return res.status(400).json({
         error: `Zona inválida. Debe ser una de: ${zonasValidas.join(", ")}`
       });
     }
 
-    // Validación de tipo de investigación
     if (!tiposValidos.includes(tipoInvestigacion)) {
       return res.status(400).json({
-        error: `Tipo de investigación inválido. Debe ser uno de: ${tiposValidos.join(", ")}`
+        error: `Tipo de investigación inválido. Debe ser una de: ${tiposValidos.join(", ")}`
       });
     }
 
-    // Validación de inspector
     const correoInspector = inspectores[inspector];
     if (!correoInspector) {
       return res.status(400).json({
@@ -110,20 +110,36 @@ const crearCaso = async (req, res) => {
 
     await nuevoCaso.save();
 
-    // -----------------------------
-    // CORREO (SOLO PRUEBA - NO ENVÍA)
-    // -----------------------------
-    console.log("📩 [MODO PRUEBA] Se habría enviado correo a:", correoInspector);
-    console.log(`
-Asunto: Caso asignado
+    // ======================================================
+    // ENVÍO DE CORREO
+    // ======================================================
 
-Se le ha asignado la ${tipoInvestigacion} del patrono ${nombrePatrono},
-con número de solicitud de estudio ${numeroCaso}.
+    const mensajeCorreo = `
+Se le ha asignado una nueva investigación.
+
+📌 Tipo: ${tipoInvestigacion}
+📌 Patrono: ${nombrePatrono}
+📌 Número de caso: ${numeroCaso}
 
 Atentamente,
 Sistema Gestor de Casos – CCSS
 Mensaje generado automáticamente. No responder.
-    `);
+`;
+
+    if (TEST_MODE) {
+      console.log("📩 [MODO PRUEBA] CORREO NO ENVIADO");
+      console.log("Destinatario:", correoInspector);
+      console.log(mensajeCorreo);
+    } else {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: correoInspector,
+        subject: "Nuevo caso asignado",
+        text: mensajeCorreo
+      });
+
+      console.log("📨 Correo enviado a:", correoInspector);
+    }
 
     res.status(201).json(nuevoCaso);
 
@@ -133,9 +149,9 @@ Mensaje generado automáticamente. No responder.
   }
 };
 
-// -----------------------------
-// EDITAR (SOLO CAMPOS PERMITIDOS)
-// -----------------------------
+// ======================================================
+// EDITAR CAMPOS PERMITIDOS
+// ======================================================
 
 const editarCaso = async (req, res) => {
   try {
@@ -161,9 +177,9 @@ const editarCaso = async (req, res) => {
   }
 };
 
-// -----------------------------
+// ======================================================
 // CAMBIAR ESTADO
-// -----------------------------
+// ======================================================
 
 const cambiarEstado = async (req, res) => {
   try {
@@ -190,9 +206,9 @@ const cambiarEstado = async (req, res) => {
   }
 };
 
-// -----------------------------
+// ======================================================
 // AGREGAR NOTA
-// -----------------------------
+// ======================================================
 
 const agregarNota = async (req, res) => {
   try {
@@ -212,6 +228,11 @@ const agregarNota = async (req, res) => {
     res.status(500).json({ error: "Error al agregar nota" });
   }
 };
+
+// ======================================================
+// ELIMINAR CASO
+// ======================================================
+
 const eliminarCaso = async (req, res) => {
   try {
     const { id } = req.params;
@@ -229,6 +250,11 @@ const eliminarCaso = async (req, res) => {
     res.status(500).json({ error: "Error al eliminar el caso" });
   }
 };
+
+// ======================================================
+// PAGINACIÓN
+// ======================================================
+
 const obtenerCasosPaginados = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
@@ -253,9 +279,9 @@ const obtenerCasosPaginados = async (req, res) => {
   }
 };
 
-// -----------------------------
+// ======================================================
 // EXPORTAR
-// -----------------------------
+// ======================================================
 
 module.exports = {
   obtenerCasos,
