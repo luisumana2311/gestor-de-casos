@@ -1,12 +1,14 @@
 require("dotenv").config();
 
+console.log("MONGO_URI cargada:", process.env.MONGO_URI ? "SI" : "NO");
+
+const conectarDB = require("./src/config/db");
+console.log("Intentando conectar DB...");
+conectarDB();
+
 const express = require("express");
 const path = require("path");
 const app = express();
-
-const conectarDB = require("./src/config/db");
-
-conectarDB();
 
 app.use(express.json());
 
@@ -14,7 +16,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // Rutas API

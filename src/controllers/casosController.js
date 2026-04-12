@@ -9,7 +9,7 @@ const nodemailer = require("nodemailer");
 // ======================================================
 
 // Cambiar a false para enviar correos reales
-const TEST_MODE = false;
+const TEST_MODE = true;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",

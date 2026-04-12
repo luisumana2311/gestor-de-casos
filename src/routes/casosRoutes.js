@@ -1,10 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-// MIDDLEWARE DE AUTENTICACIÓN
-const auth = require("../config/middleware/authMiddleware");
-
-
 // CONTROLADORES
 const {
   obtenerCasosPaginados,
@@ -17,28 +13,28 @@ const {
 } = require("../controllers/casosController");
 
 // =======================
-// RUTAS PROTEGIDAS
+// RUTAS SIN AUTENTICACIÓN (PARA PRUEBAS)
 // =======================
 
-// PAGINACIÓN (ruta principal)
-router.get("/", auth, obtenerCasosPaginados);
+// PAGINACIÓN
+router.get("/", obtenerCasosPaginados);
 
 // OBTENER UN CASO POR ID
-router.get("/:id", auth, obtenerCasoPorId);
+router.get("/:id", obtenerCasoPorId);
 
 // CREAR CASO
-router.post("/", auth, crearCaso);
+router.post("/", crearCaso);
 
-// EDITAR CAMPOS PERMITIDOS
-router.put("/:id", auth, editarCaso);
+// EDITAR CAMPOS
+router.put("/:id", editarCaso);
 
-// CAMBIAR ESTADO DE CASO
-router.patch("/:id/estado", auth, cambiarEstado);
+// CAMBIAR ESTADO
+router.patch("/:id/estado", cambiarEstado);
 
 // AGREGAR NOTAS
-router.post("/:id/notas", auth, agregarNota);
+router.post("/:id/notas", agregarNota);
 
 // ELIMINAR CASO
-router.delete("/:id", auth, eliminarCaso);
+router.delete("/:id", eliminarCaso);
 
 module.exports = router;

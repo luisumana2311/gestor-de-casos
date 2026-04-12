@@ -1,13 +1,4 @@
 // ===============================
-// PROTECCIÓN DE RUTA (Render)
-// ===============================
-let token = localStorage.getItem("token");
-
-if (!token) {
-  window.location.href = "login.html";
-}
-
-// ===============================
 // INICIALIZACIÓN CUANDO CARGA EL DOM
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
@@ -15,25 +6,27 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ===============================
-// CONFIGURACIÓN (Render)
+// CONFIGURACIÓN (LOCAL)
 // ===============================
-const API_BASE = "https://gestor-de-casos.onrender.com";
+const API_BASE = "http://localhost:4000";
 const API = `${API_BASE}/casos`;
 const API_INSPECTORES = `${API_BASE}/inspectores`;
+
+let token = ""; // ya no usamos autenticación
 
 let paginaActual = 1;
 let totalPaginas = 1;
 const LIMITE = 10;
 
 // ===============================
-// FETCH con Token
+// FETCH SIN TOKEN (SOLO JSON)
 // ===============================
 async function fetchConToken(url, options = {}) {
   options.headers = {
     ...(options.headers || {}),
-    "Authorization": "Bearer " + token,
     "Content-Type": "application/json",
   };
+
   return fetch(url, options);
 }
 
@@ -76,12 +69,14 @@ async function cargarInspectores() {
 document.getElementById("formCaso")?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  const selectInspector = document.getElementById("inspectorNombre");
+
   const caso = {
     numeroCaso: document.getElementById("numeroCaso").value,
     nombrePatrono: document.getElementById("nombrePatrono").value,
     tipoInvestigacion: document.getElementById("tipoInvestigacion").value,
     zona: document.getElementById("zona").value,
-    inspector: document.getElementById("inspectorNombre").value,
+    inspector: selectInspector.value,
     fechaAsignado: document.getElementById("fechaAsignado").value
   };
 
@@ -91,16 +86,16 @@ document.getElementById("formCaso")?.addEventListener("submit", async (e) => {
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    alert("Error: " + (error.error || "No se pudo crear el caso"));
+    const error = await res.json().catch(() => ({}));
+    alert("Error: " + (error.error || error.mensaje || "No se pudo crear el caso"));
     return;
   }
 
   alert("Caso registrado correctamente");
   document.getElementById("formCaso").reset();
+  cargarInspectores();
   cargarCasos(1);
 });
-
 // ===============================
 // FORMATEAR FECHA
 // ===============================
