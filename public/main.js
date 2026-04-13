@@ -1,26 +1,16 @@
-// ===============================
-// INICIALIZACIÓN CUANDO CARGA EL DOM
-// ===============================
 document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
 });
 
-// ===============================
-// CONFIGURACIÓN (LOCAL)
-// ===============================
-const API_BASE = "http://localhost:4000";
-const API = `${API_BASE}/casos`;
-const API_INSPECTORES = `${API_BASE}/inspectores`;
+const API = "/casos";
+const API_INSPECTORES = "/inspectores";
 
-let token = ""; // ya no usamos autenticación
+let token = "";
 
 let paginaActual = 1;
 let totalPaginas = 1;
 const LIMITE = 10;
 
-// ===============================
-// FETCH SIN TOKEN (SOLO JSON)
-// ===============================
 async function fetchConToken(url, options = {}) {
   options.headers = {
     ...(options.headers || {}),
@@ -29,7 +19,6 @@ async function fetchConToken(url, options = {}) {
 
   return fetch(url, options);
 }
-
 // ===============================
 // CARGAR INSPECTORES
 // ===============================
