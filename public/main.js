@@ -35,9 +35,10 @@ async function fetchConToken(url, options = {}) {
 // ===============================
 async function cargarInspectores() {
   try {
-    const res = await fetchConToken(API_INSPECTORES);
-    const lista = await res.json();
+    const res = await fetch(API_INSPECTORES);
+    console.log("Status:", res.status);
 
+    const lista = await res.json();
     console.log("Inspectores cargados:", lista);
 
     const select = document.getElementById("inspectorNombre");
@@ -46,23 +47,18 @@ async function cargarInspectores() {
     select.innerHTML = '<option value="">Seleccione un inspector...</option>';
 
     lista.forEach((ins) => {
-      select.innerHTML += `
-        <option value="${ins.nombre}" data-correo="${ins.correo}">
-          ${ins.nombre}
-        </option>
-      `;
+      select.innerHTML += `<option value="${ins.nombre}" data-correo="${ins.correo}">${ins.nombre}</option>`;
     });
 
-    select.addEventListener("change", () => {
-      const correo = select.selectedOptions[0].dataset.correo || "";
+    select.onchange = () => {
+      const correo = select.selectedOptions[0]?.dataset.correo || "";
       correoInput.value = correo;
-    });
+    };
 
   } catch (error) {
     console.error("Error cargando inspectores:", error);
   }
 }
-
 // ===============================
 // REGISTRAR CASO
 // ===============================
