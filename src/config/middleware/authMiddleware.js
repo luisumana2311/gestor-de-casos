@@ -1,14 +1,16 @@
 const jwt = require("jsonwebtoken");
 
 module.exports = (req, res, next) => {
-  const token = req.headers["authorization"];
+  const authorization = req.headers["authorization"];
 
-  if (!token) {
+  if (!authorization) {
     return res.status(401).json({ mensaje: "No autorizado." });
   }
 
   try {
-    const decoded = jwt.verify(token.replace("Bearer ", ""), process.env.JWT_SECRET);
+    const token = authorization.replace("Bearer ", "");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     req.usuario = decoded;
     next();
   } catch (error) {
