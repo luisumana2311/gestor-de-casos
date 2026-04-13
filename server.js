@@ -8,12 +8,21 @@ conectarDB();
 
 const express = require("express");
 const path = require("path");
+const cors = require("cors");
+
 const app = express();
 
+// Middlewares
+app.use(cors());
 app.use(express.json());
 
 // Servir carpeta public
 app.use(express.static(path.join(__dirname, "public")));
+
+// Ruta de prueba (IMPORTANTE para Render)
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
@@ -28,8 +37,9 @@ app.use("/auth", authRoutes);
 app.use("/casos", casosRoutes);
 app.use("/inspectores", inspectoresRoutes);
 
+// Puerto dinámico (Render)
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
