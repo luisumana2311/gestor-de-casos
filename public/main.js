@@ -2,8 +2,11 @@ document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
 });
 
-const API = "/casos";
-const API_INSPECTORES = "/inspectores";
+// 🔥 IMPORTANTE: URL de tu backend en Render
+const API_BASE = "https://gestor-de-casos.onrender.com";
+
+const API = API_BASE + "/casos";
+const API_INSPECTORES = API_BASE + "/inspectores";
 
 let token = "";
 
@@ -19,6 +22,7 @@ async function fetchConToken(url, options = {}) {
 
   return fetch(url, options);
 }
+
 // ===============================
 // CARGAR INSPECTORES
 // ===============================
@@ -48,6 +52,7 @@ async function cargarInspectores() {
     console.error("Error cargando inspectores:", error);
   }
 }
+
 // ===============================
 // REGISTRAR CASO
 // ===============================
@@ -81,6 +86,7 @@ document.getElementById("formCaso")?.addEventListener("submit", async (e) => {
   cargarInspectores();
   cargarCasos(1);
 });
+
 // ===============================
 // FORMATEAR FECHA
 // ===============================

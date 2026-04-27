@@ -1,11 +1,13 @@
 const express = require("express");
 const router = express.Router();
 
-const { registrarUsuario, login } = require("../controllers/authController");
+const { login, registrarUsuario } = require("../controllers/authController");
+const verificarToken = require("../middlewares/authMiddleware");
 
-// Solo vos usarás esta ruta para crear usuarios
-router.post("/register", registrarUsuario);
-
+// Público
 router.post("/login", login);
+
+// Protegido: solo con token
+router.post("/register", verificarToken, registrarUsuario);
 
 module.exports = router;
