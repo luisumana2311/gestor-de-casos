@@ -1,329 +1,84 @@
-document.addEventListener("DOMContentLoaded", () => {
-  inicializarApp();
-});
-
-// 🔥 IMPORTANTE: URL de tu backend en Render
-const API_BASE = window.APP_CONFIG.API_BASE;
-
-const API = API_BASE + "/casos";
-const API_INSPECTORES = API_BASE + "/inspectores";
-const API_REGISTRO = API_BASE + "/auth/register";
-
-const token = localStorage.getItem("token");
-const usuarioActual = obtenerUsuarioActual();
-
+const API = `${window.APP_CONFIG.API_BASE}/casos`;
+const API_INSPECTORES = `${window.APP_CONFIG.API_BASE}/inspectores`;
+const usuarioActual = Session.user;
 let paginaActual = 1;
 let totalPaginas = 1;
 const LIMITE = 10;
 
-function obtenerUsuarioActual() {
-  try {
-    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    const paddedPayload = payload.padEnd(Math.ceil(payload.length / 4) * 4, "=");
-    const bytes = Uint8Array.from(atob(paddedPayload), (character) => character.charCodeAt(0));
-    return JSON.parse(new TextDecoder().decode(bytes));
-  } catch (_error) {
-    localStorage.removeItem("token");
-    window.location.href = "login.html";
-    return null;
-  }
+document.addEventListener("DOMContentLoaded", inicializarApp);
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 }
 
-function cerrarSesion() {
-  localStorage.removeItem("token");
-  window.location.href = "login.html";
+function configurarInterfaz() {
+  document.getElementById("usuarioActual").textContent = `${usuarioActual.nombre || usuarioActual.correo} · ${usuarioActual.rol}`;
+  if (usuarioActual.rol === "admin") document.getElementById("usuariosNavItem").classList.remove("d-none");
+  if (usuarioActual.rol === "inspector") document.getElementById("nuevoCasoButton").classList.add("d-none");
 }
 
-function configurarInterfazPorRol() {
-  document.getElementById("usuarioActual").textContent =
-    `${usuarioActual.nombre || usuarioActual.correo} · ${usuarioActual.rol}`;
-
-  if (usuarioActual.rol === "admin") {
-    document.getElementById("gestionUsuariosCard").classList.remove("d-none");
-  }
-
-  if (usuarioActual.rol === "inspector") {
-    document.getElementById("registroCasoCard").classList.add("d-none");
-  }
-}
-
-async function fetchConToken(url, options = {}) {
-  if (!token) {
-    window.location.href = "login.html";
-    throw new Error("No hay una sesión activa.");
-  }
-
-  options.headers = {
-    ...(options.headers || {}),
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-
-  const response = await fetch(url, options);
-
-  if (response.status === 401) {
-    localStorage.removeItem("token");
-    window.location.href = "login.html";
-    throw new Error("La sesión expiró.");
-  }
-
-  return response;
-}
-
-// ===============================
-// CARGAR INSPECTORES
-// ===============================
 async function cargarInspectores() {
-  try {
-    const res = await fetchConToken(API_INSPECTORES);
-    console.log("Status:", res.status);
-
-    const lista = await res.json();
-    console.log("Inspectores cargados:", lista);
-
-    const select = document.getElementById("inspectorNombre");
-    const correoInput = document.getElementById("inspectorCorreo");
-
-    select.innerHTML = '<option value="">Seleccione un inspector...</option>';
-
-    lista.forEach((ins) => {
-      select.innerHTML += `<option value="${ins.nombre}" data-correo="${ins.correo}">${ins.nombre}</option>`;
-    });
-
-    select.onchange = () => {
-      const correo = select.selectedOptions[0]?.dataset.correo || "";
-      correoInput.value = correo;
-    };
-
-  } catch (error) {
-    console.error("Error cargando inspectores:", error);
-  }
+  const response = await Session.fetchWithAuth(API_INSPECTORES);
+  const inspectores = await response.json();
+  const select = document.getElementById("inspectorNombre");
+  select.innerHTML = '<option value="">Seleccionar inspector</option>' + inspectores.map((inspector) => `<option value="${escapeHtml(inspector.nombre)}" data-correo="${escapeHtml(inspector.correo)}">${escapeHtml(inspector.nombre)}</option>`).join("");
+  select.addEventListener("change", () => { document.getElementById("inspectorCorreo").value = select.selectedOptions[0]?.dataset.correo || ""; });
 }
 
-// ===============================
-// REGISTRAR CASO
-// ===============================
-document.getElementById("formCaso")?.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const selectInspector = document.getElementById("inspectorNombre");
-
-  const caso = {
-    numeroCaso: document.getElementById("numeroCaso").value,
-    nombrePatrono: document.getElementById("nombrePatrono").value,
-    tipoInvestigacion: document.getElementById("tipoInvestigacion").value,
-    zona: document.getElementById("zona").value,
-    inspector: selectInspector.value,
-    fechaAsignado: document.getElementById("fechaAsignado").value
-  };
-
-  const res = await fetchConToken(API, {
-    method: "POST",
-    body: JSON.stringify(caso),
-  });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    alert("Error: " + (error.error || error.mensaje || "No se pudo crear el caso"));
-    return;
-  }
-
-  alert("Caso registrado correctamente");
-  document.getElementById("formCaso").reset();
-  cargarInspectores();
-  cargarCasos(1);
-});
-
-document.getElementById("formUsuario")?.addEventListener("submit", async (event) => {
+document.getElementById("formCaso")?.addEventListener("submit", async (event) => {
   event.preventDefault();
-
-  const resultado = document.getElementById("usuarioResultado");
-  resultado.className = "mt-3 text-muted";
-  resultado.textContent = "Creando usuario...";
-
-  const response = await fetchConToken(API_REGISTRO, {
-    method: "POST",
-    body: JSON.stringify({
-      nombre: document.getElementById("usuarioNombre").value,
-      correo: document.getElementById("usuarioCorreo").value,
-      password: document.getElementById("usuarioPassword").value,
-      rol: document.getElementById("usuarioRol").value,
-    }),
-  });
+  const response = await Session.fetchWithAuth(API, { method: "POST", body: JSON.stringify({ numeroCaso: document.getElementById("numeroCaso").value.trim(), nombrePatrono: document.getElementById("nombrePatrono").value.trim(), tipoInvestigacion: document.getElementById("tipoInvestigacion").value, zona: document.getElementById("zona").value, inspector: document.getElementById("inspectorNombre").value, fechaAsignado: document.getElementById("fechaAsignado").value }) });
   const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    resultado.className = "mt-3 text-danger";
-    resultado.textContent = data.mensaje || "No se pudo crear el usuario.";
-    return;
-  }
-
-  resultado.className = "mt-3 text-success";
-  resultado.textContent = "Usuario creado correctamente. Ya puede iniciar sesión.";
-  document.getElementById("formUsuario").reset();
+  if (!response.ok) return mostrarAlerta(data.error || data.mensaje || "No se pudo crear el caso.", "danger");
+  event.currentTarget.reset();
+  mostrarAlerta("Caso registrado correctamente.", "success");
+  bootstrap.Collapse.getOrCreateInstance(document.getElementById("nuevoCasoPanel")).hide();
+  await cargarCasos(1);
 });
 
-// ===============================
-// FORMATEAR FECHA
-// ===============================
-function formatearFecha(f) {
-  if (!f) return "";
-  return new Date(f).toLocaleDateString("es-CR");
+function mostrarAlerta(message, type) {
+  const alert = document.getElementById("tableAlert");
+  alert.className = `alert alert-${type}`;
+  alert.textContent = message;
 }
 
-// ===============================
-// TABLA
-// ===============================
-function pintarTabla(lista) {
-  const tbody = document.getElementById("listaCasos");
-  tbody.innerHTML = "";
+function formatDate(value) { return value ? new Date(value).toLocaleDateString("es-CR") : "—"; }
+function statusClass(status) { return `status-${String(status).toLowerCase()}`; }
 
-  lista.forEach((caso) => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${caso._id}</td>
-        <td>${caso.numeroCaso}</td>
-        <td>${caso.nombrePatrono}</td>
-        <td>${caso.tipoInvestigacion}</td>
-        <td>${caso.zona}</td>
-        <td>${caso.inspector?.nombre || caso.inspector}</td>
-        <td>${caso.estado}</td>
-        <td>${caso.viaAdministrativa || ""}</td>
-        <td>${formatearFecha(caso.fechaAsignado)}</td>
-        <td>${formatearFecha(caso.fechaResuelto)}</td>
-        <td>${caso.diasHabiles ?? ""}</td>
-        <td>${caso.numeroResolucion || ""}</td>
-
-        <td>
-          <button class="btn btn-warning btn-sm me-2" onclick="abrirEditar('${caso._id}')">Editar</button>
-          ${usuarioActual.rol === "admin"
-            ? `<button class="btn btn-danger btn-sm" onclick="eliminarCaso('${caso._id}')">Eliminar</button>`
-            : ""}
-        </td>
-      </tr>
-    `;
-  });
+function pintarTabla(casos) {
+  const body = document.getElementById("listaCasos");
+  if (!casos.length) { body.innerHTML = '<tr><td colspan="12" class="empty-row">No hay casos que coincidan con la búsqueda.</td></tr>'; return; }
+  body.innerHTML = casos.map((caso) => `<tr><td><strong>${escapeHtml(caso.numeroCaso)}</strong></td><td>${escapeHtml(caso.nombrePatrono)}</td><td>${escapeHtml(caso.tipoInvestigacion)}</td><td>${escapeHtml(caso.zona)}</td><td>${escapeHtml(caso.inspector?.nombre || caso.inspector)}</td><td><span class="badge-status ${statusClass(caso.estado)}">${escapeHtml(caso.estado)}</span></td><td>${escapeHtml(caso.viaAdministrativa || "—")}</td><td>${formatDate(caso.fechaAsignado)}</td><td>${formatDate(caso.fechaResuelto)}</td><td>${escapeHtml(caso.diasHabiles ?? "—")}</td><td>${escapeHtml(caso.numeroResolucion || "—")}</td><td><div class="d-flex gap-2"><button class="btn btn-light btn-sm" onclick="abrirEditar('${caso._id}')">Editar</button>${usuarioActual.rol === "admin" ? `<button class="btn btn-outline-danger btn-sm" onclick="eliminarCaso('${caso._id}')">Eliminar</button>` : ""}</div></td></tr>`).join("");
 }
 
-// ===============================
-// PAGINACIÓN
-// ===============================
+function actualizarIndicadores(casos, total) {
+  document.getElementById("totalCasos").textContent = total;
+  document.getElementById("casosPendientes").textContent = casos.filter((item) => item.estado === "Pendiente").length;
+  document.getElementById("casosResueltos").textContent = casos.filter((item) => item.estado === "Resuelto").length;
+  document.getElementById("casosSectorizados").textContent = casos.filter((item) => item.estado === "Sectorizado").length;
+}
+
 async function cargarCasos(page = 1) {
-  const res = await fetchConToken(`${API}?page=${page}&limit=${LIMITE}`);
-  const data = await res.json();
-
-  pintarTabla(data.casos);
-
-  paginaActual = data.page;
-  totalPaginas = data.totalPages;
-
-  actualizarControlesPaginacion();
+  try {
+    const response = await Session.fetchWithAuth(`${API}?page=${page}&limit=${LIMITE}`);
+    if (!response.ok) throw new Error("No se pudieron cargar los casos.");
+    const data = await response.json();
+    pintarTabla(data.casos); actualizarIndicadores(data.casos, data.total);
+    paginaActual = data.page; totalPaginas = data.totalPages || 1; actualizarPaginacion();
+  } catch (error) { mostrarAlerta(error.message, "danger"); }
 }
 
-function paginaAnterior() {
-  if (paginaActual > 1) cargarCasos(paginaActual - 1);
-}
+function actualizarPaginacion() { document.getElementById("paginaActual").textContent = paginaActual; document.getElementById("totalPaginas").textContent = totalPaginas; document.getElementById("anteriorButton").disabled = paginaActual <= 1; document.getElementById("siguienteButton").disabled = paginaActual >= totalPaginas; }
+function paginaAnterior() { if (paginaActual > 1) cargarCasos(paginaActual - 1); }
+function paginaSiguiente() { if (paginaActual < totalPaginas) cargarCasos(paginaActual + 1); }
 
-function paginaSiguiente() {
-  if (paginaActual < totalPaginas) cargarCasos(paginaActual + 1);
-}
+async function abrirEditar(id) { const response = await Session.fetchWithAuth(`${API}/${id}`); const caso = await response.json(); if (!response.ok) return mostrarAlerta(caso.error || "No se pudo abrir el caso.", "danger"); document.getElementById("editId").value = caso._id; document.getElementById("editVia").value = caso.viaAdministrativa || ""; document.getElementById("editResolucion").value = caso.numeroResolucion || ""; document.getElementById("editEstado").value = caso.estado; bootstrap.Modal.getOrCreateInstance(document.getElementById("modalEditar")).show(); }
 
-function actualizarControlesPaginacion() {
-  document.getElementById("paginaActual").innerText = paginaActual;
-  document.getElementById("totalPaginas").innerText = totalPaginas;
-}
+async function guardarCambios() { const id = document.getElementById("editId").value; const update = await Session.fetchWithAuth(`${API}/${id}`, { method: "PUT", body: JSON.stringify({ viaAdministrativa: document.getElementById("editVia").value, numeroResolucion: document.getElementById("editResolucion").value.trim() }) }); if (!update.ok) return mostrarAlerta("No se pudieron guardar los cambios.", "danger"); const state = await Session.fetchWithAuth(`${API}/${id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: document.getElementById("editEstado").value }) }); if (!state.ok) return mostrarAlerta("No se pudo actualizar el estado.", "danger"); bootstrap.Modal.getInstance(document.getElementById("modalEditar")).hide(); mostrarAlerta("Caso actualizado correctamente.", "success"); cargarCasos(paginaActual); }
 
-// ===============================
-// EDITAR CASO
-// ===============================
-async function abrirEditar(id) {
-  const res = await fetchConToken(`${API}/${id}`);
-  const caso = await res.json();
+async function eliminarCaso(id) { if (!window.confirm("¿Deseas eliminar este caso de forma permanente?")) return; const response = await Session.fetchWithAuth(`${API}/${id}`, { method: "DELETE" }); const data = await response.json().catch(() => ({})); if (!response.ok) return mostrarAlerta(data.error || "No se pudo eliminar el caso.", "danger"); mostrarAlerta("Caso eliminado correctamente.", "success"); cargarCasos(paginaActual); }
 
-  document.getElementById("editId").value = caso._id;
-  document.getElementById("editVia").value = caso.viaAdministrativa || "";
-  document.getElementById("editResolucion").value = caso.numeroResolucion || "";
-  document.getElementById("editEstado").value = caso.estado;
+async function filtrarCasos() { const response = await Session.fetchWithAuth(`${API}?page=1&limit=100`); const data = await response.json(); const estado = document.getElementById("filtroEstado").value; const via = document.getElementById("filtroVia").value; const filtered = data.casos.filter((caso) => (!estado || caso.estado === estado) && (!via || caso.viaAdministrativa === via)); pintarTabla(filtered); actualizarIndicadores(filtered, filtered.length); }
+function limpiarFiltros() { document.getElementById("filtroEstado").value = ""; document.getElementById("filtroVia").value = ""; cargarCasos(1); }
 
-  const modal = new bootstrap.Modal(document.getElementById("modalEditar"));
-  modal.show();
-}
-
-async function guardarCambios() {
-  const id = document.getElementById("editId").value;
-
-  const via = document.getElementById("editVia").value;
-  const resolucion = document.getElementById("editResolucion").value;
-  const estado = document.getElementById("editEstado").value;
-
-  await fetchConToken(`${API}/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      viaAdministrativa: via,
-      numeroResolucion: resolucion,
-    }),
-  });
-
-  await fetchConToken(`${API}/${id}/estado`, {
-    method: "PATCH",
-    body: JSON.stringify({ estado }),
-  });
-
-  alert("Cambios guardados correctamente");
-  cargarCasos(paginaActual);
-
-  const modal = bootstrap.Modal.getInstance(document.getElementById("modalEditar"));
-  modal.hide();
-}
-
-// ===============================
-// ELIMINAR CASO
-// ===============================
-async function eliminarCaso(id) {
-  const confirmar = confirm("¿Seguro que desea eliminar este caso?");
-  if (!confirmar) return;
-
-  const res = await fetchConToken(`${API}/${id}`, { method: "DELETE" });
-
-  if (!res.ok) {
-    const error = await res.json();
-    alert("Error: " + (error.error || "No se pudo eliminar el caso"));
-    return;
-  }
-
-  alert("Caso eliminado correctamente");
-  cargarCasos(paginaActual);
-}
-
-// ===============================
-// FILTROS
-// ===============================
-async function filtrarCasos() {
-  const estado = document.getElementById("filtroEstado").value;
-  const via = document.getElementById("filtroVia").value;
-
-  const res = await fetchConToken(`${API}?page=1&limit=100`);
-  const data = await res.json();
-
-  let casos = data.casos;
-
-  if (estado !== "") casos = casos.filter((c) => c.estado === estado);
-  if (via !== "") casos = casos.filter((c) => c.viaAdministrativa === via);
-
-  pintarTabla(casos);
-}
-
-function limpiarFiltros() {
-  document.getElementById("filtroEstado").value = "";
-  document.getElementById("filtroVia").value = "";
-  cargarCasos(1);
-}
-
-// ===============================
-// EJECUCIÓN INICIAL
-// ===============================
-function inicializarApp() {
-  configurarInterfazPorRol();
-  cargarInspectores();
-  cargarCasos(1);
-}
+async function inicializarApp() { configurarInterfaz(); actualizarPaginacion(); await Promise.all([cargarInspectores(), cargarCasos(1)]); }
