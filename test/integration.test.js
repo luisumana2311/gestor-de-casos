@@ -183,6 +183,23 @@ describe("case lifecycle", () => {
     caseId = response.body._id;
   });
 
+  it("provides global dashboard metrics to administrators", async () => {
+    const response = await authenticated("get", "/dashboard", adminToken);
+    assert.equal(response.status, 200);
+    assert.equal(response.body.alcance, "global");
+    assert.equal(response.body.indicadores.total, 1);
+    assert.equal(response.body.indicadores.pendientes, 1);
+    assert.equal(response.body.porInspector[0].correo, "inspector@example.com");
+    assert.equal(response.body.casosRecientes[0].numeroCaso, "INT-2026-001");
+  });
+
+  it("limits inspector dashboard metrics to assigned cases", async () => {
+    const response = await authenticated("get", "/dashboard", inspectorToken);
+    assert.equal(response.status, 200);
+    assert.equal(response.body.alcance, "personal");
+    assert.equal(response.body.indicadores.total, 1);
+  });
+
   it("allows an inspector to read and update the assigned workflow", async () => {
     const listResponse = await authenticated("get", "/casos", inspectorToken);
     assert.equal(listResponse.status, 200);
