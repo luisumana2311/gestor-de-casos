@@ -21,7 +21,7 @@ async function cargarInspectores() {
   const response = await Session.fetchWithAuth(API_INSPECTORES);
   const inspectores = await response.json();
   const select = document.getElementById("inspectorNombre");
-  select.innerHTML = '<option value="">Seleccionar inspector</option>' + inspectores.map((inspector) => `<option value="${escapeHtml(inspector._id)}" data-correo="${escapeHtml(inspector.correo)}">${escapeHtml(inspector.nombre)}</option>`).join("");
+  select.innerHTML = '<option value="">Seleccionar inspector</option>' + inspectores.map((inspector) => `<option value="${escapeHtml(inspector.assignmentKey)}" data-correo="${escapeHtml(inspector.correo)}">${escapeHtml(inspector.nombre)}</option>`).join("");
   select.addEventListener("change", () => { document.getElementById("inspectorCorreo").value = select.selectedOptions[0]?.dataset.correo || ""; });
 }
 

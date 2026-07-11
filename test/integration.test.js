@@ -141,6 +141,30 @@ describe("user account management", () => {
 });
 
 describe("case lifecycle", () => {
+  it("keeps preloaded inspectors visible and adds account inspectors without duplicates", async () => {
+    const response = await authenticated("get", "/inspectores", adminToken);
+    assert.equal(response.status, 200);
+    assert.ok(response.body.length >= 13);
+    assert.equal(response.body.filter((item) => item.correo === "mfernans@ccss.sa.cr").length, 1);
+    assert.ok(response.body.some((item) => item.correo === "inspector@example.com"));
+  });
+
+  it("allows assigning a case to a preloaded inspector without a user account", async () => {
+    const response = await authenticated("post", "/casos", adminToken).send({
+      numeroCaso: "CATALOG-2026-001",
+      nombrePatrono: "Patrono del catalogo",
+      tipoInvestigacion: "Inscripción Patronal",
+      zona: "Pavas",
+      inspector: "catalog:mfernans@ccss.sa.cr",
+      fechaAsignado: "2026-07-01",
+    });
+
+    assert.equal(response.status, 201, JSON.stringify(response.body));
+    assert.equal(response.body.inspector.correo, "mfernans@ccss.sa.cr");
+    assert.equal(response.body.inspector.usuarioId, null);
+    await Caso.findByIdAndDelete(response.body._id);
+  });
+
   it("allows an administrator to create a case", async () => {
     const response = await authenticated("post", "/casos", adminToken).send({
       numeroCaso: "INT-2026-001",
