@@ -7,12 +7,45 @@ const API_BASE = window.APP_CONFIG.API_BASE;
 
 const API = API_BASE + "/casos";
 const API_INSPECTORES = API_BASE + "/inspectores";
+const API_REGISTRO = API_BASE + "/auth/register";
 
 const token = localStorage.getItem("token");
+const usuarioActual = obtenerUsuarioActual();
 
 let paginaActual = 1;
 let totalPaginas = 1;
 const LIMITE = 10;
+
+function obtenerUsuarioActual() {
+  try {
+    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const paddedPayload = payload.padEnd(Math.ceil(payload.length / 4) * 4, "=");
+    const bytes = Uint8Array.from(atob(paddedPayload), (character) => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch (_error) {
+    localStorage.removeItem("token");
+    window.location.href = "login.html";
+    return null;
+  }
+}
+
+function cerrarSesion() {
+  localStorage.removeItem("token");
+  window.location.href = "login.html";
+}
+
+function configurarInterfazPorRol() {
+  document.getElementById("usuarioActual").textContent =
+    `${usuarioActual.nombre || usuarioActual.correo} · ${usuarioActual.rol}`;
+
+  if (usuarioActual.rol === "admin") {
+    document.getElementById("gestionUsuariosCard").classList.remove("d-none");
+  }
+
+  if (usuarioActual.rol === "inspector") {
+    document.getElementById("registroCasoCard").classList.add("d-none");
+  }
+}
 
 async function fetchConToken(url, options = {}) {
   if (!token) {
@@ -101,6 +134,35 @@ document.getElementById("formCaso")?.addEventListener("submit", async (e) => {
   cargarCasos(1);
 });
 
+document.getElementById("formUsuario")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const resultado = document.getElementById("usuarioResultado");
+  resultado.className = "mt-3 text-muted";
+  resultado.textContent = "Creando usuario...";
+
+  const response = await fetchConToken(API_REGISTRO, {
+    method: "POST",
+    body: JSON.stringify({
+      nombre: document.getElementById("usuarioNombre").value,
+      correo: document.getElementById("usuarioCorreo").value,
+      password: document.getElementById("usuarioPassword").value,
+      rol: document.getElementById("usuarioRol").value,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    resultado.className = "mt-3 text-danger";
+    resultado.textContent = data.mensaje || "No se pudo crear el usuario.";
+    return;
+  }
+
+  resultado.className = "mt-3 text-success";
+  resultado.textContent = "Usuario creado correctamente. Ya puede iniciar sesión.";
+  document.getElementById("formUsuario").reset();
+});
+
 // ===============================
 // FORMATEAR FECHA
 // ===============================
@@ -134,7 +196,9 @@ function pintarTabla(lista) {
 
         <td>
           <button class="btn btn-warning btn-sm me-2" onclick="abrirEditar('${caso._id}')">Editar</button>
-          <button class="btn btn-danger btn-sm" onclick="eliminarCaso('${caso._id}')">Eliminar</button>
+          ${usuarioActual.rol === "admin"
+            ? `<button class="btn btn-danger btn-sm" onclick="eliminarCaso('${caso._id}')">Eliminar</button>`
+            : ""}
         </td>
       </tr>
     `;
@@ -259,6 +323,7 @@ function limpiarFiltros() {
 // EJECUCIÓN INICIAL
 // ===============================
 function inicializarApp() {
+  configurarInterfazPorRol();
   cargarInspectores();
   cargarCasos(1);
 }
