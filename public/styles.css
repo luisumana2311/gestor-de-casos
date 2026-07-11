@@ -85,6 +85,11 @@ body {
 .status-resuelto { color: #065f46; background: #d1fae5; }
 .status-sectorizado { color: #1e40af; background: #dbeafe; }
 .empty-row { padding: 3rem !important; text-align: center; color: var(--muted); }
+.users-table { min-width: 820px; }
+.user-avatar { display: grid; width: 38px; height: 38px; place-items: center; flex: 0 0 auto; border-radius: 12px; color: #1e40af; background: #dbeafe; font-weight: 850; }
+.status-dot { display: inline-block; width: 8px; height: 8px; margin-right: .4rem; border-radius: 50%; }
+.status-active { background: var(--success); }
+.status-inactive { background: #94a3b8; }
 
 .login-page { display: grid; min-height: 100vh; grid-template-columns: minmax(0, 1.1fr) minmax(420px, .9fr); background: var(--surface); }
 .login-visual { position: relative; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; padding: clamp(2rem, 6vw, 5rem); color: white; background: linear-gradient(145deg, #07122f, #172554 60%, #1d4ed8); }

@@ -13,6 +13,7 @@ let mongoServer;
 let app;
 let adminToken;
 let inspectorToken;
+let inspectorId;
 let caseId;
 
 before(async () => {
@@ -42,6 +43,7 @@ before(async () => {
   assert.equal(registrationResponse.status, 201);
 
   inspectorToken = await login("inspector@example.com");
+  inspectorId = String((await Usuario.findOne({ correo: "inspector@example.com" }))._id);
 });
 
 after(async () => {
@@ -63,6 +65,74 @@ async function login(correo) {
 function authenticated(method, path, token) {
   return request(app)[method](path).set("Authorization", `Bearer ${token}`);
 }
+
+describe("user account management", () => {
+  it("lists users without exposing password hashes", async () => {
+    const response = await authenticated("get", "/auth/users", adminToken);
+    assert.equal(response.status, 200);
+    assert.equal(response.body.length, 2);
+    assert.equal(response.body.some((user) => Object.hasOwn(user, "password")), false);
+  });
+
+  it("deactivates an account and immediately revokes its active token", async () => {
+    const statusResponse = await authenticated(
+      "patch",
+      `/auth/users/${inspectorId}/status`,
+      adminToken,
+    ).send({ activo: false });
+    assert.equal(statusResponse.status, 200);
+
+    const existingSessionResponse = await authenticated("get", "/casos", inspectorToken);
+    assert.equal(existingSessionResponse.status, 401);
+
+    const loginResponse = await request(app).post("/auth/login").send({
+      correo: "inspector@example.com",
+      password: "integration-password",
+    });
+    assert.equal(loginResponse.status, 403);
+  });
+
+  it("reactivates an account and allows it to log in again", async () => {
+    const response = await authenticated(
+      "patch",
+      `/auth/users/${inspectorId}/status`,
+      adminToken,
+    ).send({ activo: true });
+    assert.equal(response.status, 200);
+    inspectorToken = await login("inspector@example.com");
+  });
+
+  it("prevents administrators from disabling or deleting themselves", async () => {
+    const adminId = String((await Usuario.findOne({ correo: "admin@example.com" }))._id);
+    const disableResponse = await authenticated(
+      "patch",
+      `/auth/users/${adminId}/status`,
+      adminToken,
+    ).send({ activo: false });
+    assert.equal(disableResponse.status, 400);
+
+    const deleteResponse = await authenticated("delete", `/auth/users/${adminId}`, adminToken);
+    assert.equal(deleteResponse.status, 400);
+  });
+
+  it("deletes another account", async () => {
+    const passwordHash = await bcrypt.hash("temporary-password", 4);
+    const temporaryUser = await Usuario.create({
+      nombre: "Temporary User",
+      correo: "temporary@example.com",
+      password: passwordHash,
+      rol: "supervisor",
+    });
+
+    const response = await authenticated(
+      "delete",
+      `/auth/users/${temporaryUser._id}`,
+      adminToken,
+    );
+    assert.equal(response.status, 200);
+    assert.equal(await Usuario.exists({ _id: temporaryUser._id }), null);
+  });
+});
 
 describe("case lifecycle", () => {
   it("allows an administrator to create a case", async () => {

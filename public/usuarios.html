@@ -14,6 +14,21 @@
       <div class="col-lg-7"><section class="panel"><div class="panel-header"><h2 class="section-title">Crear nuevo usuario</h2><p class="text-secondary small mb-0 mt-1">La contraseña inicial debe tener al menos 10 caracteres.</p></div><div class="panel-body"><form id="formUsuario" class="row g-3"><div class="col-md-6"><label for="usuarioNombre" class="form-label">Nombre completo</label><input id="usuarioNombre" class="form-control" required maxlength="100"></div><div class="col-md-6"><label for="usuarioCorreo" class="form-label">Correo electrónico</label><input id="usuarioCorreo" type="email" class="form-control" required></div><div class="col-md-6"><label for="usuarioPassword" class="form-label">Contraseña temporal</label><input id="usuarioPassword" type="password" class="form-control" minlength="10" required></div><div class="col-md-6"><label for="usuarioRol" class="form-label">Rol</label><select id="usuarioRol" class="form-select" required><option value="inspector">Inspector</option><option value="supervisor">Supervisor</option></select></div><div class="col-12 d-flex justify-content-end"><button id="crearUsuarioButton" class="btn btn-primary px-4">Crear usuario</button></div></form><div id="usuarioResultado" class="alert d-none mt-4 mb-0" role="status"></div></div></section></div>
       <div class="col-lg-5"><aside class="panel role-card"><div class="panel-body"><span class="eyebrow">Matriz de acceso</span><h2 class="section-title mt-2 mb-3">¿Qué puede hacer cada rol?</h2><h3 class="fs-6 fw-bold">Supervisor</h3><ul class="feature-list"><li>Crear y consultar casos</li><li>Actualizar estados, notas y resoluciones</li></ul><hr><h3 class="fs-6 fw-bold">Inspector</h3><ul class="feature-list mb-0"><li>Consultar los casos registrados</li><li>Actualizar estados y notas</li><li>Sin acceso a usuarios ni eliminaciones</li></ul></div></aside></div>
     </div>
+    <section class="panel mt-4">
+      <div class="panel-header d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center">
+        <div><h2 class="section-title">Cuentas registradas</h2><p class="text-secondary small mb-0 mt-1">Activa, suspende o elimina accesos del sistema.</p></div>
+        <div class="d-flex gap-2"><span class="badge text-bg-light p-2">Total: <strong id="totalUsuarios">0</strong></span><span class="badge text-bg-light p-2">Activos: <strong id="usuariosActivos">0</strong></span></div>
+      </div>
+      <div class="panel-body">
+        <div id="listaUsuariosResultado" class="alert d-none" role="status"></div>
+        <div class="table-responsive">
+          <table class="table app-table users-table">
+            <thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Creado</th><th>Acciones</th></tr></thead>
+            <tbody id="listaUsuarios"><tr><td colspan="6" class="empty-row">Cargando usuarios...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="usuarios.js"></script>
 </body>

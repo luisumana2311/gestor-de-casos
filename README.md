@@ -40,6 +40,11 @@ Gestor de Casos is a web-based system designed to support the control and follow
 Administrators can create inspector and supervisor accounts from the deployed web
 interface. The browser hides case creation from inspectors and destructive actions
 from every non-administrator role; the API enforces the same rules independently.
+The same administration module lists every account and allows administrators to
+activate, deactivate or permanently delete other users. Inactive accounts cannot
+log in and existing JWT sessions are revoked on their next API request. The current
+administrator account and the last remaining administrator are protected from
+accidental deactivation or deletion.
 
 ## Configuration
 

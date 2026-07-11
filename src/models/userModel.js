@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ["admin", "supervisor", "inspector"],
     default: "inspector"
+  },
+  activo: {
+    type: Boolean,
+    default: true
   }
 }, { timestamps: true });
 

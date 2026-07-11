@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const verificarToken = require("../config/middleware/authMiddleware");
 const { permitirRoles } = require("../config/middleware/authMiddleware");
+const { verificarCuentaActiva } = require("../config/middleware/authMiddleware");
 
 // CONTROLADORES
 const {
@@ -14,7 +15,7 @@ const {
   eliminarCaso
 } = require("../controllers/casosController");
 
-router.use(verificarToken);
+router.use(verificarToken, verificarCuentaActiva);
 
 // PAGINACIÓN
 router.get("/", obtenerCasosPaginados);

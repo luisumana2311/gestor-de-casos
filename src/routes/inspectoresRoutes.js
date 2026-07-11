@@ -3,8 +3,9 @@ const router = express.Router();
 
 const inspectores = require("../config/inspectores");
 const verificarToken = require("../config/middleware/authMiddleware");
+const { verificarCuentaActiva } = require("../config/middleware/authMiddleware");
 
-router.get("/", verificarToken, (req, res) => {
+router.get("/", verificarToken, verificarCuentaActiva, (req, res) => {
   try {
     const lista = Object.entries(inspectores).map(([nombre, correo]) => ({
       nombre,
