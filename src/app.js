@@ -49,6 +49,7 @@ app.use("/auth/login", loginLimiter);
 app.use("/auth", require("./routes/authRoutes"));
 app.use("/casos", require("./routes/casosRoutes"));
 app.use("/inspectores", require("./routes/inspectoresRoutes"));
+app.use("/dashboard", require("./routes/dashboardRoutes"));
 
 app.use((_req, res) => {
   res.status(404).json({ mensaje: "Recurso no encontrado." });

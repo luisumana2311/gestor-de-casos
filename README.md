@@ -26,6 +26,7 @@ Gestor de Casos is a web-based system designed to support the control and follow
 - JWT authentication and role-based authorization
 - Login rate limiting and restricted CORS configuration
 - Automated security checks with GitHub Actions
+- Independent analytics dashboard with workload, resolution and delay indicators
 
 ## Roles and permissions
 
