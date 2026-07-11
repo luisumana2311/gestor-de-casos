@@ -51,6 +51,8 @@ npm start
 
 Allowed browser origins are configured as a comma-separated list in
 `CORS_ORIGINS`. Email delivery remains disabled unless `EMAIL_ENABLED=true`.
+The static frontend reads its deployed API URL from `public/config.js`; localhost
+continues to use the local server automatically.
 
 ## Tests
 
