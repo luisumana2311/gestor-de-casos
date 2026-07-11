@@ -57,6 +57,8 @@ Allowed browser origins are configured as a comma-separated list in
 `CORS_ORIGINS`. Email delivery remains disabled unless `EMAIL_ENABLED=true`.
 The static frontend reads its deployed API URL from `public/config.js`; localhost
 continues to use the local server automatically.
+The Express application trusts exactly one reverse-proxy hop, matching Render's
+public web-service topology and preserving per-client login rate limiting.
 
 ## Tests
 

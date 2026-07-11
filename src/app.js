@@ -6,6 +6,10 @@ const { rateLimit } = require("express-rate-limit");
 
 const app = express();
 
+// Render terminates HTTPS at one reverse-proxy hop and forwards the client IP.
+// Trust exactly that hop so rate limiting keys requests by the real client.
+app.set("trust proxy", 1);
+
 const allowedOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
   .map((origin) => origin.trim())
