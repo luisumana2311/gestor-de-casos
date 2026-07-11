@@ -102,7 +102,7 @@
       return;
     }
 
-    const API_BASE = "https://gestor-de-casos.onrender.com";
+    const API_BASE = window.location.origin;
 
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",

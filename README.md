@@ -23,6 +23,74 @@ Gestor de Casos is a web-based system designed to support the control and follow
 - Resolution date control
 - Administrative workflow organization
 - Database-driven case storage
+- JWT authentication and role-based authorization
+- Login rate limiting and restricted CORS configuration
+- Automated security checks with GitHub Actions
+
+## Roles and permissions
+
+| Action | Admin | Supervisor | Inspector |
+| --- | --- | --- | --- |
+| View cases and inspectors | Yes | Yes | Yes |
+| Create cases | Yes | Yes | No |
+| Update cases, status and notes | Yes | Yes | Yes |
+| Delete cases | Yes | No | No |
+| Register users | Yes | No | No |
+
+## Configuration
+
+Copy `.env.example` to `.env` and replace every placeholder. Use a randomly generated
+`JWT_SECRET` with at least 32 characters. If credentials were previously committed,
+rotate them before deploying the application.
+
+```bash
+cp .env.example .env
+npm install
+npm start
+```
+
+Allowed browser origins are configured as a comma-separated list in
+`CORS_ORIGINS`. Email delivery remains disabled unless `EMAIL_ENABLED=true`.
+
+## Tests
+
+```bash
+npm test
+```
+
+The test suite verifies public health checks, protected resources, invalid tokens
+and the most important role boundaries. Integration tests run against a temporary
+MongoDB instance and cover login plus the complete case lifecycle without touching
+development or production data.
+
+## Existing-user migration
+
+Older installations may contain users with the legacy `cliente` role. Preview the
+migration first; the preview never changes data:
+
+```bash
+npm run migrate:roles
+```
+
+After checking the reported number, apply the conversion to `inspector`:
+
+```bash
+npm run migrate:roles -- --apply
+```
+
+Back up the database before applying migrations in production.
+
+## First administrator
+
+If the database has no administrator, configure the three `BOOTSTRAP_ADMIN_*`
+variables shown in `.env.example` and run:
+
+```bash
+npm run bootstrap:admin
+```
+
+The command refuses to create another account when an administrator already exists.
+Remove the bootstrap values from the deployment environment after use.
 
 ## Project Purpose
 

@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const verificarToken = require("../config/middleware/authMiddleware");
+const { permitirRoles } = require("../config/middleware/authMiddleware");
 
 // CONTROLADORES
 const {
@@ -12,9 +14,7 @@ const {
   eliminarCaso
 } = require("../controllers/casosController");
 
-// =======================
-// RUTAS SIN AUTENTICACIÓN (PARA PRUEBAS)
-// =======================
+router.use(verificarToken);
 
 // PAGINACIÓN
 router.get("/", obtenerCasosPaginados);
@@ -23,18 +23,18 @@ router.get("/", obtenerCasosPaginados);
 router.get("/:id", obtenerCasoPorId);
 
 // CREAR CASO
-router.post("/", crearCaso);
+router.post("/", permitirRoles("admin", "supervisor"), crearCaso);
 
 // EDITAR CAMPOS
-router.put("/:id", editarCaso);
+router.put("/:id", permitirRoles("admin", "supervisor", "inspector"), editarCaso);
 
 // CAMBIAR ESTADO
-router.patch("/:id/estado", cambiarEstado);
+router.patch("/:id/estado", permitirRoles("admin", "supervisor", "inspector"), cambiarEstado);
 
 // AGREGAR NOTAS
-router.post("/:id/notas", agregarNota);
+router.post("/:id/notas", permitirRoles("admin", "supervisor", "inspector"), agregarNota);
 
 // ELIMINAR CASO
-router.delete("/:id", eliminarCaso);
+router.delete("/:id", permitirRoles("admin"), eliminarCaso);
 
 module.exports = router;

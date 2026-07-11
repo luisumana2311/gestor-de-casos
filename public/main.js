@@ -3,24 +3,38 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // 🔥 IMPORTANTE: URL de tu backend en Render
-const API_BASE = "https://gestor-de-casos.onrender.com";
+const API_BASE = window.location.origin;
 
 const API = API_BASE + "/casos";
 const API_INSPECTORES = API_BASE + "/inspectores";
 
-let token = "";
+const token = localStorage.getItem("token");
 
 let paginaActual = 1;
 let totalPaginas = 1;
 const LIMITE = 10;
 
 async function fetchConToken(url, options = {}) {
+  if (!token) {
+    window.location.href = "login.html";
+    throw new Error("No hay una sesión activa.");
+  }
+
   options.headers = {
     ...(options.headers || {}),
     "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
   };
 
-  return fetch(url, options);
+  const response = await fetch(url, options);
+
+  if (response.status === 401) {
+    localStorage.removeItem("token");
+    window.location.href = "login.html";
+    throw new Error("La sesión expiró.");
+  }
+
+  return response;
 }
 
 // ===============================
@@ -28,7 +42,7 @@ async function fetchConToken(url, options = {}) {
 // ===============================
 async function cargarInspectores() {
   try {
-    const res = await fetch(API_INSPECTORES);
+    const res = await fetchConToken(API_INSPECTORES);
     console.log("Status:", res.status);
 
     const lista = await res.json();
@@ -224,7 +238,7 @@ async function filtrarCasos() {
   const estado = document.getElementById("filtroEstado").value;
   const via = document.getElementById("filtroVia").value;
 
-  const res = await fetchConToken(`${API}?page=1&limit=50000`);
+  const res = await fetchConToken(`${API}?page=1&limit=100`);
   const data = await res.json();
 
   let casos = data.casos;

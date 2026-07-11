@@ -1,45 +1,33 @@
 require("dotenv").config();
 
-console.log("MONGO_URI cargada:", process.env.MONGO_URI ? "SI" : "NO");
-
 const conectarDB = require("./src/config/db");
-console.log("Intentando conectar DB...");
-conectarDB();
+const app = require("./src/app");
 
-const express = require("express");
-const path = require("path");
-const cors = require("cors");
+const PORT = Number(process.env.PORT) || 4000;
 
-const app = express();
+async function start() {
+  validateEnvironment();
+  await conectarDB();
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
+  app.listen(PORT, () => {
+    console.log(`Servidor disponible en el puerto ${PORT}`);
+  });
+}
 
-// Servir carpeta public
-app.use(express.static(path.join(__dirname, "public")));
+function validateEnvironment() {
+  const requiredVariables = ["MONGO_URI", "JWT_SECRET"];
+  const missingVariables = requiredVariables.filter((name) => !process.env[name]);
 
-// Ruta de prueba (IMPORTANTE para Render)
-app.get("/health", (req, res) => {
-  res.status(200).send("OK");
-});
+  if (missingVariables.length > 0) {
+    throw new Error(`Faltan variables de entorno: ${missingVariables.join(", ")}`);
+  }
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+  if (process.env.JWT_SECRET.length < 32) {
+    throw new Error("JWT_SECRET debe tener al menos 32 caracteres.");
+  }
+}
 
-// Rutas API
-const authRoutes = require("./src/routes/authRoutes");
-const casosRoutes = require("./src/routes/casosRoutes");
-const inspectoresRoutes = require("./src/routes/inspectoresRoutes");
-
-app.use("/auth", authRoutes);
-app.use("/casos", casosRoutes);
-app.use("/inspectores", inspectoresRoutes);
-
-// Puerto dinámico (Render)
-const PORT = process.env.PORT || 4000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+start().catch((error) => {
+  console.error("No se pudo iniciar la aplicación:", error.message);
+  process.exit(1);
 });

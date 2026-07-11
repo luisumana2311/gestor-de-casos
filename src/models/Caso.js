@@ -53,7 +53,7 @@ const CasoSchema = new mongoose.Schema({
 
   notas: [
     {
-      texto: { type: String },
+      texto: { type: String, required: true, trim: true, maxlength: 1000 },
       fecha: { type: Date, default: Date.now }
     }
   ],

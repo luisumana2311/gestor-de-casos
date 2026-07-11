@@ -2,12 +2,24 @@ const Usuario = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const ROLES_VALIDOS = ["admin", "supervisor", "inspector"];
+
 exports.registrarUsuario = async (req, res) => {
   try {
-    const { nombre, correo, password, rol } = req.body;
+    const nombre = req.body.nombre?.trim();
+    const correo = req.body.correo?.trim().toLowerCase();
+    const { password, rol = "inspector" } = req.body;
 
-    if (!nombre || !correo || !password || !rol) {
+    if (!nombre || !correo || !password) {
       return res.status(400).json({ mensaje: "Todos los campos son obligatorios." });
+    }
+
+    if (!ROLES_VALIDOS.includes(rol)) {
+      return res.status(400).json({ mensaje: "El rol indicado no es válido." });
+    }
+
+    if (password.length < 10) {
+      return res.status(400).json({ mensaje: "La contraseña debe tener al menos 10 caracteres." });
     }
 
     const existe = await Usuario.findOne({ correo });
@@ -15,8 +27,7 @@ exports.registrarUsuario = async (req, res) => {
       return res.status(400).json({ mensaje: "El usuario ya existe." });
     }
 
-    const salt = bcrypt.genSaltSync(10);
-    const passwordHash = bcrypt.hashSync(password, salt);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const nuevoUsuario = new Usuario({
       nombre,
@@ -36,7 +47,8 @@ exports.registrarUsuario = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { correo, password } = req.body;
+    const correo = req.body.correo?.trim().toLowerCase();
+    const { password } = req.body;
 
     if (!correo || !password) {
       return res.status(400).json({ mensaje: "Correo y contraseña son obligatorios." });
@@ -47,7 +59,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ mensaje: "Credenciales inválidas." });
     }
 
-    const valido = bcrypt.compareSync(password, usuario.password);
+    const valido = await bcrypt.compare(password, usuario.password);
     if (!valido) {
       return res.status(400).json({ mensaje: "Credenciales inválidas." });
     }
