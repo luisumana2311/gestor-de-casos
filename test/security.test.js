@@ -22,6 +22,17 @@ describe("API security foundation", () => {
     assert.equal(response.body.status, "ok");
   });
 
+  it("accepts Render forwarded client IPs for login rate limiting", async () => {
+    const app = require("../src/app");
+    const response = await request(app)
+      .post("/auth/login")
+      .set("X-Forwarded-For", "203.0.113.10")
+      .send({});
+
+    assert.equal(app.get("trust proxy"), 1);
+    assert.equal(response.status, 400);
+  });
+
   it("rejects case access without a token", async () => {
     const app = require("../src/app");
     const response = await request(app).get("/casos");
