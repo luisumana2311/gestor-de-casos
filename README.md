@@ -102,9 +102,13 @@ npm run migrate:case-inspectors
 npm run migrate:case-inspectors -- --apply
 ```
 
-Active inspector accounts are now the only source for new assignments. Inspectors
-see only their assigned cases, while supervisors and administrators retain the
-global view. Every creation, administrative edit, status change and note records
+New assignments use a hybrid inspector catalog: the institution's preloaded
+inspectors always remain available, and active inspector accounts are added and
+linked automatically by email without duplicates. A preloaded inspector can
+receive a case before having a login account; creating an active inspector account
+later with the same email grants access to those assigned cases. Inspectors see
+only their assigned cases, while supervisors and administrators retain the global
+view. Every creation, administrative edit, status change and note records
 the acting user, role, timestamp and relevant changes in the case activity history.
 
 ## First administrator

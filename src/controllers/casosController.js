@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
 const Caso = require("../models/Caso");
 const Usuario = require("../models/userModel");
+const inspectoresPrecargados = require("../config/inspectores");
 const calcularDiasHabiles = require("../utils/calcularDiasHabiles");
 const feriados = require("../utils/feriados");
 
@@ -47,6 +48,36 @@ function registrarEvento(caso, req, tipo, descripcion, cambios = {}) {
   caso.historial.push({ tipo, descripcion, usuario: actor(req), cambios });
 }
 
+async function resolverInspector(valor) {
+  const seleccion = String(valor || "");
+  const idUsuario = seleccion.startsWith("user:") ? seleccion.slice(5) : seleccion;
+
+  if (mongoose.isValidObjectId(idUsuario)) {
+    const usuario = await Usuario.findOne({
+      _id: idUsuario,
+      rol: "inspector",
+      activo: { $ne: false },
+    });
+    if (!usuario) return null;
+    return { usuarioId: usuario._id, nombre: usuario.nombre, correo: usuario.correo };
+  }
+
+  if (!seleccion.startsWith("catalog:")) return null;
+  const correoSeleccionado = seleccion.slice(8).trim().toLowerCase();
+  const entrada = Object.entries(inspectoresPrecargados).find(
+    ([, correo]) => correo.toLowerCase() === correoSeleccionado,
+  );
+  if (!entrada) return null;
+
+  const [nombre, correo] = entrada;
+  const usuario = await Usuario.findOne({
+    correo: correoSeleccionado,
+    rol: "inspector",
+    activo: { $ne: false },
+  });
+  return { usuarioId: usuario?._id || null, nombre: usuario?.nombre || nombre, correo };
+}
+
 async function obtenerCasoPorId(req, res) {
   try {
     if (!validarId(req.params.id, res)) return;
@@ -68,15 +99,7 @@ async function crearCaso(req, res) {
     if (!zonasValidas.includes(zona) || !tiposValidos.includes(tipoInvestigacion)) {
       return res.status(400).json({ error: "La zona o el tipo de investigación no es válido." });
     }
-    if (!mongoose.isValidObjectId(inspector)) {
-      return res.status(400).json({ error: "Debe seleccionar un inspector válido." });
-    }
-
-    const usuarioInspector = await Usuario.findOne({
-      _id: inspector,
-      rol: "inspector",
-      activo: { $ne: false },
-    });
+    const usuarioInspector = await resolverInspector(inspector);
     if (!usuarioInspector) return res.status(400).json({ error: "El inspector no existe o está inactivo." });
 
     const fecha = fechaAsignado ? new Date(`${fechaAsignado}T12:00:00`) : new Date();
@@ -87,7 +110,7 @@ async function crearCaso(req, res) {
       nombrePatrono: nombrePatrono.trim(),
       tipoInvestigacion,
       zona,
-      inspector: { usuarioId: usuarioInspector._id, nombre: usuarioInspector.nombre, correo: usuarioInspector.correo },
+      inspector: usuarioInspector,
       fechaAsignado: fecha,
       estado: "Pendiente",
     });
