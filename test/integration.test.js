@@ -24,22 +24,23 @@ before(async () => {
   app = require("../src/app");
 
   const passwordHash = await bcrypt.hash("integration-password", 4);
-  await Usuario.create([
-    {
-      nombre: "Admin Test",
-      correo: "admin@example.com",
-      password: passwordHash,
-      rol: "admin",
-    },
-    {
-      nombre: "Inspector Test",
-      correo: "inspector@example.com",
-      password: passwordHash,
-      rol: "inspector",
-    },
-  ]);
+  await Usuario.create({
+    nombre: "Admin Test",
+    correo: "admin@example.com",
+    password: passwordHash,
+    rol: "admin",
+  });
 
   adminToken = await login("admin@example.com");
+
+  const registrationResponse = await authenticated("post", "/auth/register", adminToken).send({
+    nombre: "Inspector Test",
+    correo: "inspector@example.com",
+    password: "integration-password",
+    rol: "inspector",
+  });
+  assert.equal(registrationResponse.status, 201);
+
   inspectorToken = await login("inspector@example.com");
 });
 

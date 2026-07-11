@@ -37,6 +37,10 @@ Gestor de Casos is a web-based system designed to support the control and follow
 | Delete cases | Yes | No | No |
 | Register users | Yes | No | No |
 
+Administrators can create inspector and supervisor accounts from the deployed web
+interface. The browser hides case creation from inspectors and destructive actions
+from every non-administrator role; the API enforces the same rules independently.
+
 ## Configuration
 
 Copy `.env.example` to `.env` and replace every placeholder. Use a randomly generated
