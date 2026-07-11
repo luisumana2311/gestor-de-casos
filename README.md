@@ -59,7 +59,38 @@ npm test
 ```
 
 The test suite verifies public health checks, protected resources, invalid tokens
-and the most important role boundaries.
+and the most important role boundaries. Integration tests run against a temporary
+MongoDB instance and cover login plus the complete case lifecycle without touching
+development or production data.
+
+## Existing-user migration
+
+Older installations may contain users with the legacy `cliente` role. Preview the
+migration first; the preview never changes data:
+
+```bash
+npm run migrate:roles
+```
+
+After checking the reported number, apply the conversion to `inspector`:
+
+```bash
+npm run migrate:roles -- --apply
+```
+
+Back up the database before applying migrations in production.
+
+## First administrator
+
+If the database has no administrator, configure the three `BOOTSTRAP_ADMIN_*`
+variables shown in `.env.example` and run:
+
+```bash
+npm run bootstrap:admin
+```
+
+The command refuses to create another account when an administrator already exists.
+Remove the bootstrap values from the deployment environment after use.
 
 ## Project Purpose
 
