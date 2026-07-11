@@ -92,6 +92,7 @@
 
   </div>
 
+<script src="config.js"></script>
 <script>
   async function login() {
     const correo = document.getElementById("correo").value.trim();
@@ -102,7 +103,7 @@
       return;
     }
 
-    const API_BASE = window.location.origin;
+    const API_BASE = window.APP_CONFIG.API_BASE;
 
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",

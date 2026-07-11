@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // 🔥 IMPORTANTE: URL de tu backend en Render
-const API_BASE = window.location.origin;
+const API_BASE = window.APP_CONFIG.API_BASE;
 
 const API = API_BASE + "/casos";
 const API_INSPECTORES = API_BASE + "/inspectores";
