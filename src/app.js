@@ -1,35 +1,58 @@
-require("dotenv").config();
-
-const express = require("express");
-const cors = require("cors");
 const path = require("path");
+const cors = require("cors");
+const express = require("express");
+const helmet = require("helmet");
+const { rateLimit } = require("express-rate-limit");
 
 const app = express();
 
-// CORS para Render
-app.use(cors());
-app.use(express.json());
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-// Conexión a MongoDB
-const conectarDB = require("./src/config/db");
-conectarDB();
+app.disable("x-powered-by");
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-// Servir carpeta public (Frontend)
-app.use(express.static(path.join(__dirname, "public")));
+    return callback(new Error("Origen no permitido por CORS"));
+  },
+}));
+app.use(express.json({ limit: "100kb" }));
+app.use(express.static(path.join(__dirname, "..", "public")));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { mensaje: "Demasiados intentos. Intente nuevamente más tarde." },
 });
 
-// Rutas API
-app.use("/auth", require("./src/routes/authRoutes"));
-app.use("/casos", require("./src/routes/casosRoutes"));
-app.use("/inspectores", require("./src/routes/inspectoresRoutes"));
-
-// Puerto dinámico de Render
-const PORT = process.env.PORT || 4000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
 });
 
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "login.html"));
+});
+
+app.use("/auth/login", loginLimiter);
+app.use("/auth", require("./routes/authRoutes"));
+app.use("/casos", require("./routes/casosRoutes"));
+app.use("/inspectores", require("./routes/inspectoresRoutes"));
+
+app.use((_req, res) => {
+  res.status(404).json({ mensaje: "Recurso no encontrado." });
+});
+
+app.use((error, _req, res, _next) => {
+  console.error(error);
+  res.status(500).json({ mensaje: "Error interno del servidor." });
+});
+
+module.exports = app;

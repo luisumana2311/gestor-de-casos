@@ -3,13 +3,13 @@ const inspectores = require("../config/inspectores");
 const calcularDiasHabiles = require("../utils/calcularDiasHabiles");
 const feriados = require("../utils/feriados");
 const nodemailer = require("nodemailer");
+const mongoose = require("mongoose");
 
 // ======================================================
 // CONFIGURACIÓN DE CORREO
 // ======================================================
 
-// Cambiar a false para enviar correos reales
-const TEST_MODE = true;
+const EMAIL_ENABLED = process.env.EMAIL_ENABLED === "true";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -25,6 +25,16 @@ const transporter = nodemailer.createTransport({
 
 const zonasValidas = ["Pavas", "Montes de Oca", "Tibás", "San Sebastián", "Uruca"];
 const tiposValidos = ["Inscripción Patronal", "Reanudación Patronal"];
+const estadosValidos = ["Pendiente", "Resuelto", "Sectorizado"];
+
+function validarId(id, res) {
+  if (!mongoose.isValidObjectId(id)) {
+    res.status(400).json({ error: "Identificador de caso inválido." });
+    return false;
+  }
+
+  return true;
+}
 
 // ======================================================
 // OBTENER TODOS LOS CASOS
@@ -47,6 +57,7 @@ const obtenerCasos = async (req, res) => {
 const obtenerCasoPorId = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!validarId(id, res)) return;
     const caso = await Caso.findById(id);
 
     if (!caso) return res.status(404).json({ error: "Caso no encontrado" });
@@ -126,7 +137,7 @@ Sistema Gestor de Casos – CCSS
 Mensaje generado automáticamente. No responder.
 `;
 
-    if (TEST_MODE) {
+    if (!EMAIL_ENABLED) {
       console.log("📩 [MODO PRUEBA] CORREO NO ENVIADO");
       console.log("Destinatario:", correoInspector);
       console.log(mensajeCorreo);
@@ -156,6 +167,7 @@ Mensaje generado automáticamente. No responder.
 const editarCaso = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!validarId(id, res)) return;
     const caso = await Caso.findById(id);
 
     if (!caso) return res.status(404).json({ error: "Caso no encontrado" });
@@ -186,6 +198,11 @@ const cambiarEstado = async (req, res) => {
     const { id } = req.params;
     const { estado } = req.body;
 
+    if (!validarId(id, res)) return;
+    if (!estadosValidos.includes(estado)) {
+      return res.status(400).json({ error: "Estado inválido." });
+    }
+
     const caso = await Caso.findById(id);
     if (!caso) return res.status(404).json({ error: "Caso no encontrado" });
 
@@ -213,7 +230,12 @@ const cambiarEstado = async (req, res) => {
 const agregarNota = async (req, res) => {
   try {
     const { id } = req.params;
-    const { texto } = req.body;
+    const texto = req.body.texto?.trim();
+
+    if (!validarId(id, res)) return;
+    if (!texto || texto.length > 1000) {
+      return res.status(400).json({ error: "La nota debe contener entre 1 y 1000 caracteres." });
+    }
 
     const caso = await Caso.findById(id);
     if (!caso) return res.status(404).json({ error: "Caso no encontrado" });
@@ -237,6 +259,8 @@ const eliminarCaso = async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (!validarId(id, res)) return;
+
     const caso = await Caso.findById(id);
     if (!caso) {
       return res.status(404).json({ error: "Caso no encontrado" });
@@ -257,8 +281,8 @@ const eliminarCaso = async (req, res) => {
 
 const obtenerCasosPaginados = async (req, res) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
+    const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 20, 1), 100);
     const skip = (page - 1) * limit;
 
     const total = await Caso.countDocuments();

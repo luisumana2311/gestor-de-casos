@@ -8,7 +8,9 @@ const userSchema = new mongoose.Schema({
   correo: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    lowercase: true,
+    trim: true
   },
   password: {
     type: String,
@@ -16,8 +18,9 @@ const userSchema = new mongoose.Schema({
   },
   rol: {
     type: String,
-    default: "cliente"  // admin o cliente
+    enum: ["admin", "supervisor", "inspector"],
+    default: "inspector"
   }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model("Usuario", userSchema);
