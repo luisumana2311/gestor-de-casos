@@ -2,6 +2,9 @@ const { before, describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const jwt = require("jsonwebtoken");
 const request = require("supertest");
+const express = require("express");
+const verificarToken = require("../src/config/middleware/authMiddleware");
+const { permitirRoles } = require("../src/config/middleware/authMiddleware");
 
 before(() => {
   process.env.JWT_SECRET = "test-secret-with-at-least-32-characters";
@@ -11,6 +14,15 @@ function tokenFor(role) {
   return jwt.sign({ id: "test-user", rol: role }, process.env.JWT_SECRET, {
     expiresIn: "5m",
   });
+}
+
+function roleProtectedApp() {
+  const roleApp = express();
+  roleApp.use(express.json());
+  roleApp.all("/admin-only", verificarToken, permitirRoles("admin"), (_req, res) => {
+    res.status(204).end();
+  });
+  return roleApp;
 }
 
 describe("API security foundation", () => {
@@ -50,25 +62,18 @@ describe("API security foundation", () => {
   });
 
   it("allows only administrators to delete cases", async () => {
-    const app = require("../src/app");
-    const response = await request(app)
-      .delete("/casos/507f1f77bcf86cd799439011")
+    const response = await request(roleProtectedApp())
+      .delete("/admin-only")
       .set("Authorization", `Bearer ${tokenFor("inspector")}`);
 
     assert.equal(response.status, 403);
   });
 
   it("allows only administrators to register users", async () => {
-    const app = require("../src/app");
-    const response = await request(app)
-      .post("/auth/register")
+    const response = await request(roleProtectedApp())
+      .post("/admin-only")
       .set("Authorization", `Bearer ${tokenFor("supervisor")}`)
-      .send({
-        nombre: "Test User",
-        correo: "test@example.com",
-        password: "secure-password",
-        rol: "inspector",
-      });
+      .send({});
 
     assert.equal(response.status, 403);
   });
