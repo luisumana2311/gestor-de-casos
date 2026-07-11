@@ -8,6 +8,8 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 const Usuario = require("../src/models/userModel");
 const { migrateLegacyRoles } = require("../scripts/migrateRoles");
 const { createInitialAdmin } = require("../scripts/bootstrapAdmin");
+const { linkLegacyCaseInspectors } = require("../scripts/linkCaseInspectors");
+const Caso = require("../src/models/Caso");
 
 let mongoServer;
 let app;
@@ -52,9 +54,13 @@ after(async () => {
 });
 
 async function login(correo) {
+  return loginWithPassword(correo, "integration-password");
+}
+
+async function loginWithPassword(correo, password) {
   const response = await request(app).post("/auth/login").send({
     correo,
-    password: "integration-password",
+    password,
   });
 
   assert.equal(response.status, 200);
@@ -141,11 +147,15 @@ describe("case lifecycle", () => {
       nombrePatrono: "Patrono de prueba",
       tipoInvestigacion: "Inscripción Patronal",
       zona: "Pavas",
-      inspector: "Marcela Fernandez Sequeira",
+      inspector: inspectorId,
+      fechaAsignado: "2026-07-01",
     });
 
     assert.equal(response.status, 201);
     assert.equal(response.body.estado, "Pendiente");
+    assert.equal(response.body.inspector.usuarioId, inspectorId);
+    assert.equal(response.body.historial[0].tipo, "CREACION");
+    assert.match(response.body.fechaAsignado, /^2026-07-01/);
     caseId = response.body._id;
   });
 
@@ -163,6 +173,25 @@ describe("case lifecycle", () => {
     assert.equal(statusResponse.status, 200);
     assert.equal(statusResponse.body.estado, "Resuelto");
     assert.ok(statusResponse.body.fechaResuelto);
+    assert.equal(statusResponse.body.historial.length, 2);
+    assert.equal(statusResponse.body.historial[1].usuario.rol, "inspector");
+  });
+
+  it("prevents another inspector from seeing an unassigned case", async () => {
+    const passwordHash = await bcrypt.hash("other-inspector-password", 4);
+    await Usuario.create({
+      nombre: "Other Inspector",
+      correo: "other-inspector@example.com",
+      password: passwordHash,
+      rol: "inspector",
+    });
+    const otherToken = await loginWithPassword(
+      "other-inspector@example.com",
+      "other-inspector-password",
+    );
+    const response = await authenticated("get", "/casos", otherToken);
+    assert.equal(response.status, 200);
+    assert.equal(response.body.total, 0);
   });
 
   it("prevents an inspector from deleting a case", async () => {
@@ -196,6 +225,29 @@ describe("legacy role migration", () => {
 
     const migrated = await Usuario.findOne({ correo: "legacy@example.com" }).lean();
     assert.equal(migrated.rol, "inspector");
+  });
+});
+
+describe("legacy case assignment migration", () => {
+  it("previews and links legacy cases by inspector email", async () => {
+    const legacyCase = await Caso.create({
+      numeroCaso: "LEGACY-001",
+      nombrePatrono: "Legacy Patron",
+      tipoInvestigacion: "Inscripción Patronal",
+      zona: "Pavas",
+      inspector: { nombre: "Inspector Test", correo: "inspector@example.com" },
+      fechaAsignado: new Date(),
+    });
+
+    const preview = await linkLegacyCaseInspectors();
+    assert.equal(preview.linkable, 1);
+    assert.equal(preview.modified, 0);
+
+    const result = await linkLegacyCaseInspectors({ dryRun: false });
+    assert.equal(result.modified, 1);
+    const migratedCase = await Caso.findById(legacyCase._id).lean();
+    assert.equal(String(migratedCase.inspector.usuarioId), inspectorId);
+    await legacyCase.deleteOne();
   });
 });
 
