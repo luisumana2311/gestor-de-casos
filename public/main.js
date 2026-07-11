@@ -21,7 +21,7 @@ async function cargarInspectores() {
   const response = await Session.fetchWithAuth(API_INSPECTORES);
   const inspectores = await response.json();
   const select = document.getElementById("inspectorNombre");
-  select.innerHTML = '<option value="">Seleccionar inspector</option>' + inspectores.map((inspector) => `<option value="${escapeHtml(inspector.nombre)}" data-correo="${escapeHtml(inspector.correo)}">${escapeHtml(inspector.nombre)}</option>`).join("");
+  select.innerHTML = '<option value="">Seleccionar inspector</option>' + inspectores.map((inspector) => `<option value="${escapeHtml(inspector._id)}" data-correo="${escapeHtml(inspector.correo)}">${escapeHtml(inspector.nombre)}</option>`).join("");
   select.addEventListener("change", () => { document.getElementById("inspectorCorreo").value = select.selectedOptions[0]?.dataset.correo || ""; });
 }
 
@@ -72,7 +72,13 @@ function actualizarPaginacion() { document.getElementById("paginaActual").textCo
 function paginaAnterior() { if (paginaActual > 1) cargarCasos(paginaActual - 1); }
 function paginaSiguiente() { if (paginaActual < totalPaginas) cargarCasos(paginaActual + 1); }
 
-async function abrirEditar(id) { const response = await Session.fetchWithAuth(`${API}/${id}`); const caso = await response.json(); if (!response.ok) return mostrarAlerta(caso.error || "No se pudo abrir el caso.", "danger"); document.getElementById("editId").value = caso._id; document.getElementById("editVia").value = caso.viaAdministrativa || ""; document.getElementById("editResolucion").value = caso.numeroResolucion || ""; document.getElementById("editEstado").value = caso.estado; bootstrap.Modal.getOrCreateInstance(document.getElementById("modalEditar")).show(); }
+async function abrirEditar(id) { const response = await Session.fetchWithAuth(`${API}/${id}`); const caso = await response.json(); if (!response.ok) return mostrarAlerta(caso.error || "No se pudo abrir el caso.", "danger"); document.getElementById("editId").value = caso._id; document.getElementById("editVia").value = caso.viaAdministrativa || ""; document.getElementById("editResolucion").value = caso.numeroResolucion || ""; document.getElementById("editEstado").value = caso.estado; renderHistorial(caso.historial || []); bootstrap.Modal.getOrCreateInstance(document.getElementById("modalEditar")).show(); }
+
+function renderHistorial(historial) {
+  const container = document.getElementById("historialCaso");
+  if (!historial.length) { container.innerHTML = '<p class="text-secondary small mb-0">Este caso todavía no tiene actividad registrada.</p>'; return; }
+  container.innerHTML = [...historial].reverse().map((evento) => `<article class="history-event"><span class="history-dot"></span><div><strong>${escapeHtml(evento.descripcion)}</strong><p class="small text-secondary mb-0">${escapeHtml(evento.usuario?.nombre || "Sistema")} · ${new Date(evento.fecha).toLocaleString("es-CR")}</p></div></article>`).join("");
+}
 
 async function guardarCambios() { const id = document.getElementById("editId").value; const update = await Session.fetchWithAuth(`${API}/${id}`, { method: "PUT", body: JSON.stringify({ viaAdministrativa: document.getElementById("editVia").value, numeroResolucion: document.getElementById("editResolucion").value.trim() }) }); if (!update.ok) return mostrarAlerta("No se pudieron guardar los cambios.", "danger"); const state = await Session.fetchWithAuth(`${API}/${id}/estado`, { method: "PATCH", body: JSON.stringify({ estado: document.getElementById("editEstado").value }) }); if (!state.ok) return mostrarAlerta("No se pudo actualizar el estado.", "danger"); bootstrap.Modal.getInstance(document.getElementById("modalEditar")).hide(); mostrarAlerta("Caso actualizado correctamente.", "success"); cargarCasos(paginaActual); }
 

@@ -93,6 +93,20 @@ npm run migrate:roles -- --apply
 
 Back up the database before applying migrations in production.
 
+Cases created before inspector accounts were unified can be linked by matching the
+stored inspector email. Preview the operation first, then apply it after checking
+the unmatched count:
+
+```bash
+npm run migrate:case-inspectors
+npm run migrate:case-inspectors -- --apply
+```
+
+Active inspector accounts are now the only source for new assignments. Inspectors
+see only their assigned cases, while supervisors and administrators retain the
+global view. Every creation, administrative edit, status change and note records
+the acting user, role, timestamp and relevant changes in the case activity history.
+
 ## First administrator
 
 If the database has no administrator, configure the three `BOOTSTRAP_ADMIN_*`

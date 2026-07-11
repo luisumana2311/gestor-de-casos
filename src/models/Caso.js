@@ -28,6 +28,7 @@ const CasoSchema = new mongoose.Schema({
   },
 
   inspector: {
+    usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", default: null },
     nombre: { type: String, required: true },
     correo: { type: String, required: true }
   },
@@ -54,9 +55,27 @@ const CasoSchema = new mongoose.Schema({
   notas: [
     {
       texto: { type: String, required: true, trim: true, maxlength: 1000 },
+      autor: {
+        usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario" },
+        nombre: String,
+        rol: String
+      },
       fecha: { type: Date, default: Date.now }
     }
   ],
+
+  historial: [{
+    tipo: { type: String, required: true },
+    descripcion: { type: String, required: true },
+    usuario: {
+      usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario" },
+      nombre: String,
+      correo: String,
+      rol: String
+    },
+    cambios: { type: mongoose.Schema.Types.Mixed, default: {} },
+    fecha: { type: Date, default: Date.now }
+  }],
 
   fechaCreacion: { type: Date, default: Date.now }
 });

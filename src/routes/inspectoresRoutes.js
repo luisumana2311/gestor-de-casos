@@ -1,20 +1,21 @@
 const express = require("express");
-const router = express.Router();
-
-const inspectores = require("../config/inspectores");
+const Usuario = require("../models/userModel");
 const verificarToken = require("../config/middleware/authMiddleware");
 const { verificarCuentaActiva } = require("../config/middleware/authMiddleware");
 
-router.get("/", verificarToken, verificarCuentaActiva, (req, res) => {
-  try {
-    const lista = Object.entries(inspectores).map(([nombre, correo]) => ({
-      nombre,
-      correo,
-    }));
+const router = express.Router();
 
-    res.json(lista);
+router.get("/", verificarToken, verificarCuentaActiva, async (_req, res) => {
+  try {
+    const inspectores = await Usuario.find({ rol: "inspector", activo: { $ne: false } })
+      .select("nombre correo")
+      .sort({ nombre: 1 })
+      .lean();
+
+    res.json(inspectores);
   } catch (error) {
-    res.status(500).json({ mensaje: "Error cargando inspectores" });
+    console.error("Error al cargar inspectores:", error);
+    res.status(500).json({ mensaje: "No se pudieron cargar los inspectores." });
   }
 });
 
