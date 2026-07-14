@@ -80,4 +80,9 @@ const CasoSchema = new mongoose.Schema({
   fechaCreacion: { type: Date, default: Date.now }
 });
 
+CasoSchema.index({ estado: 1, fechaAsignado: -1 });
+CasoSchema.index({ zona: 1, viaAdministrativa: 1 });
+CasoSchema.index({ "inspector.usuarioId": 1, fechaCreacion: -1 });
+CasoSchema.index({ "inspector.correo": 1, fechaCreacion: -1 });
+
 module.exports = mongoose.model("Caso", CasoSchema);

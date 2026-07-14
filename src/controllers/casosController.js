@@ -40,6 +40,66 @@ function filtroVisibilidad(req) {
   };
 }
 
+function escaparRegex(valor) {
+  return String(valor).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function construirFiltroCasos(req) {
+  const condiciones = [];
+  const visibilidad = filtroVisibilidad(req);
+  if (Object.keys(visibilidad).length) condiciones.push(visibilidad);
+
+  const { q, estado, via, zona, inspector, desde, hasta, atrasados } = req.query;
+  if (estado && !estadosValidos.includes(estado)) {
+    return { error: "Estado de filtro inválido." };
+  }
+  if (via && !["Procedente", "Improcedente"].includes(via)) {
+    return { error: "Vía administrativa de filtro inválida." };
+  }
+  if (zona && !zonasValidas.includes(zona)) {
+    return { error: "Zona de filtro inválida." };
+  }
+
+  if (q?.trim()) {
+    const expresion = new RegExp(escaparRegex(q.trim()), "i");
+    condiciones.push({
+      $or: [
+        { numeroCaso: expresion },
+        { nombrePatrono: expresion },
+        { "inspector.nombre": expresion },
+      ],
+    });
+  }
+  if (estado) condiciones.push({ estado });
+  if (via) condiciones.push({ viaAdministrativa: via });
+  if (zona) condiciones.push({ zona });
+  if (inspector?.trim()) condiciones.push({ "inspector.correo": inspector.trim().toLowerCase() });
+
+  if (desde || hasta) {
+    const rango = {};
+    if (desde) {
+      const fechaDesde = new Date(`${desde}T00:00:00.000Z`);
+      if (Number.isNaN(fechaDesde.getTime())) return { error: "Fecha inicial inválida." };
+      rango.$gte = fechaDesde;
+    }
+    if (hasta) {
+      const fechaHasta = new Date(`${hasta}T23:59:59.999Z`);
+      if (Number.isNaN(fechaHasta.getTime())) return { error: "Fecha final inválida." };
+      rango.$lte = fechaHasta;
+    }
+    condiciones.push({ fechaAsignado: rango });
+  }
+
+  if (atrasados === "true") {
+    const limiteAtraso = new Date();
+    limiteAtraso.setUTCDate(limiteAtraso.getUTCDate() - 30);
+    condiciones.push({ estado: { $ne: "Resuelto" }, fechaAsignado: { $lt: limiteAtraso } });
+  }
+
+  if (!condiciones.length) return { filter: {} };
+  return { filter: condiciones.length === 1 ? condiciones[0] : { $and: condiciones } };
+}
+
 async function buscarCasoVisible(req, id) {
   return Caso.findOne({ _id: id, ...filtroVisibilidad(req) });
 }
@@ -213,12 +273,26 @@ async function obtenerCasosPaginados(req, res) {
   try {
     const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 20, 1), 100);
-    const filter = filtroVisibilidad(req);
-    const [total, casos] = await Promise.all([
+    const resultadoFiltro = construirFiltroCasos(req);
+    if (resultadoFiltro.error) return res.status(400).json({ error: resultadoFiltro.error });
+    const filter = resultadoFiltro.filter;
+    const visibilityFilter = filtroVisibilidad(req);
+    const [total, casos, resumenEstados] = await Promise.all([
       Caso.countDocuments(filter),
       Caso.find(filter).sort({ fechaCreacion: -1 }).skip((page - 1) * limit).limit(limit),
+      Caso.aggregate([
+        { $match: visibilityFilter },
+        { $group: { _id: "$estado", total: { $sum: 1 } } },
+      ]),
     ]);
-    res.json({ casos, total, page, totalPages: Math.ceil(total / limit) });
+    const porEstado = Object.fromEntries(resumenEstados.map((item) => [item._id, item.total]));
+    const resumen = {
+      total: resumenEstados.reduce((suma, item) => suma + item.total, 0),
+      pendientes: porEstado.Pendiente || 0,
+      resueltos: porEstado.Resuelto || 0,
+      sectorizados: porEstado.Sectorizado || 0,
+    };
+    res.json({ casos, total, page, totalPages: Math.ceil(total / limit), resumen });
   } catch (error) {
     console.error("Error en paginación:", error);
     res.status(500).json({ error: "Error al obtener los casos." });
