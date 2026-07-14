@@ -11,6 +11,7 @@ const {
   crearCaso,
   editarCaso,
   cambiarEstado,
+  actualizarGestion,
   agregarNota,
   eliminarCaso
 } = require("../controllers/casosController");
@@ -31,6 +32,9 @@ router.put("/:id", permitirRoles("admin", "supervisor", "inspector"), editarCaso
 
 // CAMBIAR ESTADO
 router.patch("/:id/estado", permitirRoles("admin", "supervisor", "inspector"), cambiarEstado);
+
+// ACTUALIZAR GESTIÓN COMPLETA
+router.patch("/:id/gestion", permitirRoles("admin", "supervisor", "inspector"), actualizarGestion);
 
 // AGREGAR NOTAS
 router.post("/:id/notas", permitirRoles("admin", "supervisor", "inspector"), agregarNota);

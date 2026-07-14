@@ -2,11 +2,13 @@ const nodemailer = require("nodemailer");
 const Notificacion = require("../models/Notificacion");
 
 const MAX_INTENTOS = 3;
+// Bloqueo temporal de lanzamiento: se habilitará únicamente al aprobar la versión final.
+const EMAIL_ROLLOUT_ENABLED = false;
 let procesando = false;
 let temporizador = null;
 
 function emailHabilitado() {
-  return process.env.EMAIL_ENABLED === "true";
+  return EMAIL_ROLLOUT_ENABLED && process.env.EMAIL_ENABLED === "true";
 }
 
 function crearTransporter() {
@@ -108,6 +110,7 @@ function iniciarProcesadorNotificaciones() {
 
 module.exports = {
   MAX_INTENTOS,
+  EMAIL_ROLLOUT_ENABLED,
   emailHabilitado,
   encolarAsignacion,
   enviarDocumento,

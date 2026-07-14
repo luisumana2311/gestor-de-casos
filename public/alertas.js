@@ -26,7 +26,7 @@ function renderCasos(data) {
   const casos = data.casos;
   document.getElementById("totalAtrasados").textContent = data.total;
   document.getElementById("casosAtrasados").innerHTML = casos.length
-    ? casos.map((caso) => `<tr><td><strong>${escapeHtml(caso.numeroCaso)}</strong></td><td>${escapeHtml(caso.nombrePatrono)}</td><td>${escapeHtml(caso.inspector?.nombre || "—")}</td><td><span class="badge-status status-${escapeHtml(caso.estado.toLowerCase())}">${escapeHtml(caso.estado)}</span></td><td>${formatDate(caso.fechaAsignado)}</td><td><strong class="text-danger">${diasTranscurridos(caso.fechaAsignado)} días</strong></td></tr>`).join("")
+    ? casos.map((caso) => `<tr><td><a class="case-link" href="caso.html?id=${caso._id}">${escapeHtml(caso.numeroCaso)}</a></td><td>${escapeHtml(caso.nombrePatrono)}</td><td>${escapeHtml(caso.inspector?.nombre || "—")}</td><td><span class="badge-status status-${escapeHtml(caso.estado.toLowerCase())}">${escapeHtml(caso.estado)}</span></td><td>${formatDate(caso.fechaAsignado)}</td><td><strong class="text-danger">${diasTranscurridos(caso.fechaAsignado)} días</strong></td></tr>`).join("")
     : '<tr><td colspan="6" class="empty-row">No hay casos atrasados. Excelente control operativo.</td></tr>';
 }
 

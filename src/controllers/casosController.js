@@ -232,6 +232,49 @@ async function cambiarEstado(req, res) {
   }
 }
 
+async function actualizarGestion(req, res) {
+  try {
+    if (!validarId(req.params.id, res)) return;
+    const { estado, viaAdministrativa = "", numeroResolucion = "" } = req.body;
+    if (!estadosValidos.includes(estado)) return res.status(400).json({ error: "Estado inválido." });
+    if (!["", "Procedente", "Improcedente"].includes(viaAdministrativa)) {
+      return res.status(400).json({ error: "Vía administrativa inválida." });
+    }
+    if (typeof numeroResolucion !== "string" || numeroResolucion.trim().length > 100) {
+      return res.status(400).json({ error: "El número de resolución no puede superar 100 caracteres." });
+    }
+
+    const caso = await buscarCasoVisible(req, req.params.id);
+    if (!caso) return res.status(404).json({ error: "Caso no encontrado." });
+    const cambios = {};
+    const resolucionNormalizada = numeroResolucion.trim();
+    for (const [campo, nuevo] of Object.entries({ viaAdministrativa, numeroResolucion: resolucionNormalizada, estado })) {
+      if (caso[campo] !== nuevo) cambios[campo] = { anterior: caso[campo], nuevo };
+    }
+
+    if (Object.hasOwn(cambios, "estado")) {
+      if (estado === "Resuelto") {
+        caso.fechaResuelto = new Date();
+        caso.diasHabiles = calcularDiasHabiles(caso.fechaAsignado, caso.fechaResuelto, feriados);
+      } else if (caso.estado === "Resuelto") {
+        caso.fechaResuelto = null;
+        caso.diasHabiles = null;
+      }
+    }
+    caso.estado = estado;
+    caso.viaAdministrativa = viaAdministrativa;
+    caso.numeroResolucion = resolucionNormalizada;
+    if (Object.keys(cambios).length) {
+      registrarEvento(caso, req, "ACTUALIZACION_GESTION", "Gestión del caso actualizada", cambios);
+    }
+    await caso.save();
+    res.json(caso);
+  } catch (error) {
+    console.error("Error al actualizar gestión:", error);
+    res.status(500).json({ error: "No se pudo actualizar la gestión del caso." });
+  }
+}
+
 async function agregarNota(req, res) {
   try {
     if (!validarId(req.params.id, res)) return;
@@ -296,6 +339,7 @@ module.exports = {
   crearCaso,
   editarCaso,
   cambiarEstado,
+  actualizarGestion,
   agregarNota,
   eliminarCaso,
   obtenerCasosPaginados,
