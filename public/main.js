@@ -51,19 +51,32 @@ function pintarTabla(casos) {
   body.innerHTML = casos.map((caso) => `<tr><td><strong>${escapeHtml(caso.numeroCaso)}</strong></td><td>${escapeHtml(caso.nombrePatrono)}</td><td>${escapeHtml(caso.tipoInvestigacion)}</td><td>${escapeHtml(caso.zona)}</td><td>${escapeHtml(caso.inspector?.nombre || caso.inspector)}</td><td><span class="badge-status ${statusClass(caso.estado)}">${escapeHtml(caso.estado)}</span></td><td>${escapeHtml(caso.viaAdministrativa || "—")}</td><td>${formatDate(caso.fechaAsignado)}</td><td>${formatDate(caso.fechaResuelto)}</td><td>${escapeHtml(caso.diasHabiles ?? "—")}</td><td>${escapeHtml(caso.numeroResolucion || "—")}</td><td><div class="d-flex gap-2"><button class="btn btn-light btn-sm" onclick="abrirEditar('${caso._id}')">Editar</button>${usuarioActual.rol === "admin" ? `<button class="btn btn-outline-danger btn-sm" onclick="eliminarCaso('${caso._id}')">Eliminar</button>` : ""}</div></td></tr>`).join("");
 }
 
-function actualizarIndicadores(casos, total) {
-  document.getElementById("totalCasos").textContent = total;
-  document.getElementById("casosPendientes").textContent = casos.filter((item) => item.estado === "Pendiente").length;
-  document.getElementById("casosResueltos").textContent = casos.filter((item) => item.estado === "Resuelto").length;
-  document.getElementById("casosSectorizados").textContent = casos.filter((item) => item.estado === "Sectorizado").length;
+function actualizarIndicadores(resumen = {}) {
+  document.getElementById("totalCasos").textContent = resumen.total || 0;
+  document.getElementById("casosPendientes").textContent = resumen.pendientes || 0;
+  document.getElementById("casosResueltos").textContent = resumen.resueltos || 0;
+  document.getElementById("casosSectorizados").textContent = resumen.sectorizados || 0;
+}
+
+function construirParametros(page) {
+  const params = new URLSearchParams({ page, limit: LIMITE });
+  const filtros = {
+    q: document.getElementById("filtroBusqueda").value.trim(),
+    estado: document.getElementById("filtroEstado").value,
+    via: document.getElementById("filtroVia").value,
+    zona: document.getElementById("filtroZona").value,
+  };
+  Object.entries(filtros).forEach(([clave, valor]) => { if (valor) params.set(clave, valor); });
+  if (document.getElementById("filtroAtrasados").checked) params.set("atrasados", "true");
+  return params;
 }
 
 async function cargarCasos(page = 1) {
   try {
-    const response = await Session.fetchWithAuth(`${API}?page=${page}&limit=${LIMITE}`);
+    const response = await Session.fetchWithAuth(`${API}?${construirParametros(page)}`);
     if (!response.ok) throw new Error("No se pudieron cargar los casos.");
     const data = await response.json();
-    pintarTabla(data.casos); actualizarIndicadores(data.casos, data.total);
+    pintarTabla(data.casos); actualizarIndicadores(data.resumen);
     paginaActual = data.page; totalPaginas = data.totalPages || 1; actualizarPaginacion();
   } catch (error) { mostrarAlerta(error.message, "danger"); }
 }
@@ -84,7 +97,9 @@ async function guardarCambios() { const id = document.getElementById("editId").v
 
 async function eliminarCaso(id) { if (!window.confirm("¿Deseas eliminar este caso de forma permanente?")) return; const response = await Session.fetchWithAuth(`${API}/${id}`, { method: "DELETE" }); const data = await response.json().catch(() => ({})); if (!response.ok) return mostrarAlerta(data.error || "No se pudo eliminar el caso.", "danger"); mostrarAlerta("Caso eliminado correctamente.", "success"); cargarCasos(paginaActual); }
 
-async function filtrarCasos() { const response = await Session.fetchWithAuth(`${API}?page=1&limit=100`); const data = await response.json(); const estado = document.getElementById("filtroEstado").value; const via = document.getElementById("filtroVia").value; const filtered = data.casos.filter((caso) => (!estado || caso.estado === estado) && (!via || caso.viaAdministrativa === via)); pintarTabla(filtered); actualizarIndicadores(filtered, filtered.length); }
-function limpiarFiltros() { document.getElementById("filtroEstado").value = ""; document.getElementById("filtroVia").value = ""; cargarCasos(1); }
+function filtrarCasos() { cargarCasos(1); }
+function limpiarFiltros() { ["filtroBusqueda", "filtroEstado", "filtroVia", "filtroZona"].forEach((id) => { document.getElementById(id).value = ""; }); document.getElementById("filtroAtrasados").checked = false; cargarCasos(1); }
+
+document.getElementById("filtroBusqueda").addEventListener("keydown", (event) => { if (event.key === "Enter") filtrarCasos(); });
 
 async function inicializarApp() { configurarInterfaz(); actualizarPaginacion(); await Promise.all([cargarInspectores(), cargarCasos(1)]); }

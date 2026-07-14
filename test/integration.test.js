@@ -193,6 +193,43 @@ describe("case lifecycle", () => {
     assert.equal(response.body.casosRecientes[0].numeroCaso, "INT-2026-001");
   });
 
+  it("filters cases on the server while keeping global summary metrics", async () => {
+    const secondCase = await Caso.create({
+      numeroCaso: "FILTER-2026-002",
+      nombrePatrono: "Comercio Sectorizado",
+      tipoInvestigacion: "Inscripción Patronal",
+      zona: "Uruca",
+      inspector: { nombre: "Inspector Test", correo: "inspector@example.com", usuarioId: inspectorId },
+      estado: "Sectorizado",
+      viaAdministrativa: "Procedente",
+      fechaAsignado: new Date("2026-06-01T12:00:00Z"),
+    });
+
+    const response = await authenticated(
+      "get",
+      "/casos?q=Comercio&estado=Sectorizado&via=Procedente&zona=Uruca&page=1&limit=10",
+      adminToken,
+    );
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.total, 1);
+    assert.equal(response.body.casos[0].numeroCaso, "FILTER-2026-002");
+    assert.deepEqual(response.body.resumen, {
+      total: 2,
+      pendientes: 1,
+      resueltos: 0,
+      sectorizados: 1,
+    });
+
+    await Caso.findByIdAndDelete(secondCase._id);
+  });
+
+  it("rejects invalid server-side filters", async () => {
+    const response = await authenticated("get", "/casos?estado=Inventado", adminToken);
+    assert.equal(response.status, 400);
+    assert.match(response.body.error, /inválido/i);
+  });
+
   it("limits inspector dashboard metrics to assigned cases", async () => {
     const response = await authenticated("get", "/dashboard", inspectorToken);
     assert.equal(response.status, 200);
@@ -204,6 +241,7 @@ describe("case lifecycle", () => {
     const listResponse = await authenticated("get", "/casos", inspectorToken);
     assert.equal(listResponse.status, 200);
     assert.equal(listResponse.body.total, 1);
+    assert.equal(listResponse.body.resumen.total, 1);
 
     const statusResponse = await authenticated(
       "patch",
