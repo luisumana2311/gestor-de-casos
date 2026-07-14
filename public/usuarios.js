@@ -74,6 +74,7 @@ async function eliminarUsuario(id) {
 
 document.getElementById("formUsuario").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const form = event.currentTarget;
   const button = document.getElementById("crearUsuarioButton");
   const result = document.getElementById("usuarioResultado");
   button.disabled = true;
@@ -89,7 +90,8 @@ document.getElementById("formUsuario").addEventListener("submit", async (event) 
     if (!response.ok) throw new Error(data.mensaje || "No se pudo crear el usuario.");
     result.className = "alert alert-success mt-4 mb-0";
     result.textContent = "Usuario creado correctamente.";
-    event.currentTarget.reset();
+    form.reset();
+    document.getElementById("listaUsuariosResultado").classList.add("d-none");
     await cargarUsuarios();
   } catch (error) {
     result.className = "alert alert-danger mt-4 mb-0";
