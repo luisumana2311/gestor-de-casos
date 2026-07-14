@@ -137,6 +137,11 @@ body {
 .recent-case strong, .recent-case span, .recent-case small { display: block; }
 .recent-case > div:first-child span, .recent-case small { margin-top: .3rem; color: var(--muted); font-size: .76rem; }
 .empty-dashboard { margin: 0; padding: 2rem; color: var(--muted); text-align: center; }
+.alerts-table { min-width: 820px; }
+.notification-status { display: inline-block; padding: .36rem .65rem; border-radius: 999px; font-size: .75rem; font-weight: 800; text-transform: capitalize; }
+.notification-pendiente, .notification-procesando { color: #92400e; background: #fef3c7; }
+.notification-enviada { color: #065f46; background: #d1fae5; }
+.notification-fallida { color: #991b1b; background: #fee2e2; }
 
 @media (max-width: 991px) {
   .login-page { grid-template-columns: 1fr; }

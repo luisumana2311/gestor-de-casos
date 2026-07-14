@@ -10,6 +10,7 @@ const { migrateLegacyRoles } = require("../scripts/migrateRoles");
 const { createInitialAdmin } = require("../scripts/bootstrapAdmin");
 const { linkLegacyCaseInspectors } = require("../scripts/linkCaseInspectors");
 const Caso = require("../src/models/Caso");
+const Notificacion = require("../src/models/Notificacion");
 
 let mongoServer;
 let app;
@@ -284,6 +285,83 @@ describe("case lifecycle", () => {
 
     const listResponse = await authenticated("get", "/casos", adminToken);
     assert.equal(listResponse.body.total, 0);
+  });
+});
+
+describe("notification center", () => {
+  it("lists delivery history according to role visibility", async () => {
+    const assignedCase = await Caso.create({
+      numeroCaso: "NOTIFY-001",
+      nombrePatrono: "Patrono notificado",
+      tipoInvestigacion: "Inscripción Patronal",
+      zona: "Pavas",
+      inspector: { usuarioId: inspectorId, nombre: "Inspector Test", correo: "inspector@example.com" },
+      fechaAsignado: new Date("2026-05-01T12:00:00Z"),
+    });
+    const catalogCase = await Caso.create({
+      numeroCaso: "NOTIFY-002",
+      nombrePatrono: "Patrono catálogo",
+      tipoInvestigacion: "Inscripción Patronal",
+      zona: "Uruca",
+      inspector: { nombre: "Inspector Catálogo", correo: "catalog@example.com" },
+      fechaAsignado: new Date("2026-05-01T12:00:00Z"),
+    });
+    await Notificacion.create([
+      {
+        caso: assignedCase._id,
+        tipo: "ASIGNACION",
+        destinatario: assignedCase.inspector,
+        asunto: "Asignación 1",
+        contenido: "Contenido 1",
+        estado: "enviada",
+      },
+      {
+        caso: catalogCase._id,
+        tipo: "ASIGNACION",
+        destinatario: catalogCase.inspector,
+        asunto: "Asignación 2",
+        contenido: "Contenido 2",
+        estado: "fallida",
+        intentos: 3,
+        ultimoError: "SMTP no disponible",
+      },
+    ]);
+
+    const adminResponse = await authenticated("get", "/notificaciones", adminToken);
+    assert.equal(adminResponse.status, 200);
+    assert.equal(adminResponse.body.total, 2);
+    assert.equal(adminResponse.body.resumen.enviadas, 1);
+    assert.equal(adminResponse.body.resumen.fallidas, 1);
+    assert.equal(adminResponse.body.emailHabilitado, false);
+    assert.deepEqual(
+      adminResponse.body.notificaciones.map((item) => item.caso.numeroCaso).sort(),
+      ["NOTIFY-001", "NOTIFY-002"],
+    );
+
+    const inspectorResponse = await authenticated("get", "/notificaciones", inspectorToken);
+    assert.equal(inspectorResponse.status, 200);
+    assert.equal(inspectorResponse.body.total, 1);
+    assert.equal(inspectorResponse.body.notificaciones[0].destinatario.correo, "inspector@example.com");
+
+    const failedNotification = await Notificacion.findOne({ caso: catalogCase._id });
+    const retryResponse = await authenticated(
+      "post",
+      `/notificaciones/${failedNotification._id}/reintentar`,
+      adminToken,
+    );
+    assert.equal(retryResponse.status, 503);
+
+    await Notificacion.deleteMany({ caso: { $in: [assignedCase._id, catalogCase._id] } });
+    await Caso.deleteMany({ _id: { $in: [assignedCase._id, catalogCase._id] } });
+  });
+
+  it("prevents inspectors from scheduling notification retries", async () => {
+    const response = await authenticated(
+      "post",
+      `/notificaciones/${new mongoose.Types.ObjectId()}/reintentar`,
+      inspectorToken,
+    );
+    assert.equal(response.status, 403);
   });
 });
 

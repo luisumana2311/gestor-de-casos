@@ -27,6 +27,8 @@ Gestor de Casos is a web-based system designed to support the control and follow
 - Login rate limiting and restricted CORS configuration
 - Automated security checks with GitHub Actions
 - Independent analytics dashboard with workload, resolution and delay indicators
+- Server-side search, operational filters and globally accurate case metrics
+- Persistent notification outbox with delivery history, retries and overdue-case alerts
 
 ## Roles and permissions
 
@@ -61,6 +63,9 @@ npm start
 
 Allowed browser origins are configured as a comma-separated list in
 `CORS_ORIGINS`. Email delivery remains disabled unless `EMAIL_ENABLED=true`.
+When email delivery is enabled, `EMAIL_USER` and `EMAIL_PASS` are required. Assignment
+emails are stored before processing, retried up to three times with progressive delays
+and can be monitored from the independent Alerts section.
 The static frontend reads its deployed API URL from `public/config.js`; localhost
 continues to use the local server automatically.
 The Express application trusts exactly one reverse-proxy hop, matching Render's
@@ -144,11 +149,10 @@ gestor-de-casos/
 
 ## Future Improvements
 
-- User authentication and role-based access
-- Advanced search and filters
-- Case reports and dashboards
-- Email notifications
-- Deployment to a cloud platform
+- Password recovery and mandatory temporary-password rotation
+- CSV/PDF operational exports
+- Configurable SLA rules by investigation type
+- Automated browser end-to-end tests
 
 ## Author
 

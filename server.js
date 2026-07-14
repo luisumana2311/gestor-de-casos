@@ -2,12 +2,14 @@ require("dotenv").config();
 
 const conectarDB = require("./src/config/db");
 const app = require("./src/app");
+const { iniciarProcesadorNotificaciones } = require("./src/services/notificacionesService");
 
 const PORT = Number(process.env.PORT) || 4000;
 
 async function start() {
   validateEnvironment();
   await conectarDB();
+  iniciarProcesadorNotificaciones();
 
   app.listen(PORT, () => {
     console.log(`Servidor disponible en el puerto ${PORT}`);
@@ -24,6 +26,12 @@ function validateEnvironment() {
 
   if (process.env.JWT_SECRET.length < 32) {
     throw new Error("JWT_SECRET debe tener al menos 32 caracteres.");
+  }
+
+  if (process.env.EMAIL_ENABLED === "true") {
+    for (const variable of ["EMAIL_USER", "EMAIL_PASS"]) {
+      if (!process.env[variable]) throw new Error(`${variable} es obligatoria cuando EMAIL_ENABLED=true.`);
+    }
   }
 }
 
