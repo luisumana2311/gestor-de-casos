@@ -29,6 +29,7 @@ Gestor de Casos is a web-based system designed to support the control and follow
 - Independent analytics dashboard with workload, resolution and delay indicators
 - Server-side search, operational filters and globally accurate case metrics
 - Persistent notification outbox with delivery history, retries and overdue-case alerts
+- Dedicated case workspace with notes, workflow management and complete audit timeline
 
 ## Roles and permissions
 
@@ -63,9 +64,11 @@ npm start
 
 Allowed browser origins are configured as a comma-separated list in
 `CORS_ORIGINS`. Email delivery remains disabled unless `EMAIL_ENABLED=true`.
-When email delivery is enabled, `EMAIL_USER` and `EMAIL_PASS` are required. Assignment
-emails are stored before processing, retried up to three times with progressive delays
-and can be monitored from the independent Alerts section.
+The email rollout is temporarily locked off in code while the product remains under
+development, even if `EMAIL_ENABLED=true` is present. When the final version is approved,
+the rollout lock can be removed and `EMAIL_USER` plus `EMAIL_PASS` will become required.
+Assignment emails will then be stored before processing, retried up to three times with
+progressive delays and monitored from the independent Alerts section.
 The static frontend reads its deployed API URL from `public/config.js`; localhost
 continues to use the local server automatically.
 The Express application trusts exactly one reverse-proxy hop, matching Render's

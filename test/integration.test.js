@@ -257,6 +257,43 @@ describe("case lifecycle", () => {
     assert.equal(statusResponse.body.historial[1].usuario.rol, "inspector");
   });
 
+  it("updates case management atomically and records internal notes", async () => {
+    const managementResponse = await authenticated(
+      "patch",
+      `/casos/${caseId}/gestion`,
+      inspectorToken,
+    ).send({
+      estado: "Sectorizado",
+      viaAdministrativa: "Procedente",
+      numeroResolucion: "RES-2026-001",
+    });
+    assert.equal(managementResponse.status, 200);
+    assert.equal(managementResponse.body.estado, "Sectorizado");
+    assert.equal(managementResponse.body.viaAdministrativa, "Procedente");
+    assert.equal(managementResponse.body.numeroResolucion, "RES-2026-001");
+    assert.equal(managementResponse.body.fechaResuelto, null);
+    assert.equal(managementResponse.body.historial.at(-1).tipo, "ACTUALIZACION_GESTION");
+
+    const noteResponse = await authenticated(
+      "post",
+      `/casos/${caseId}/notas`,
+      inspectorToken,
+    ).send({ texto: "Se coordinó visita de seguimiento con el patrono." });
+    assert.equal(noteResponse.status, 200);
+    assert.equal(noteResponse.body.notas.length, 1);
+    assert.equal(noteResponse.body.notas[0].autor.rol, "inspector");
+    assert.equal(noteResponse.body.historial.at(-1).tipo, "NOTA");
+  });
+
+  it("validates complete case management updates", async () => {
+    const response = await authenticated(
+      "patch",
+      `/casos/${caseId}/gestion`,
+      adminToken,
+    ).send({ estado: "Inventado", viaAdministrativa: "Otra", numeroResolucion: "" });
+    assert.equal(response.status, 400);
+  });
+
   it("prevents another inspector from seeing an unassigned case", async () => {
     const passwordHash = await bcrypt.hash("other-inspector-password", 4);
     await Usuario.create({
@@ -272,6 +309,9 @@ describe("case lifecycle", () => {
     const response = await authenticated("get", "/casos", otherToken);
     assert.equal(response.status, 200);
     assert.equal(response.body.total, 0);
+
+    const detailResponse = await authenticated("get", `/casos/${caseId}`, otherToken);
+    assert.equal(detailResponse.status, 404);
   });
 
   it("prevents an inspector from deleting a case", async () => {

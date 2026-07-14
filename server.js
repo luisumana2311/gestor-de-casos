@@ -2,7 +2,7 @@ require("dotenv").config();
 
 const conectarDB = require("./src/config/db");
 const app = require("./src/app");
-const { iniciarProcesadorNotificaciones } = require("./src/services/notificacionesService");
+const { emailHabilitado, iniciarProcesadorNotificaciones } = require("./src/services/notificacionesService");
 
 const PORT = Number(process.env.PORT) || 4000;
 
@@ -28,7 +28,7 @@ function validateEnvironment() {
     throw new Error("JWT_SECRET debe tener al menos 32 caracteres.");
   }
 
-  if (process.env.EMAIL_ENABLED === "true") {
+  if (emailHabilitado()) {
     for (const variable of ["EMAIL_USER", "EMAIL_PASS"]) {
       if (!process.env[variable]) throw new Error(`${variable} es obligatoria cuando EMAIL_ENABLED=true.`);
     }
