@@ -50,6 +50,7 @@ app.use("/auth", require("./routes/authRoutes"));
 app.use("/casos", require("./routes/casosRoutes"));
 app.use("/inspectores", require("./routes/inspectoresRoutes"));
 app.use("/dashboard", require("./routes/dashboardRoutes"));
+app.use("/notificaciones", require("./routes/notificacionesRoutes"));
 
 app.use((_req, res) => {
   res.status(404).json({ mensaje: "Recurso no encontrado." });

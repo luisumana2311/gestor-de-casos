@@ -1,20 +1,14 @@
 const mongoose = require("mongoose");
-const nodemailer = require("nodemailer");
 const Caso = require("../models/Caso");
 const Usuario = require("../models/userModel");
 const inspectoresPrecargados = require("../config/inspectores");
 const calcularDiasHabiles = require("../utils/calcularDiasHabiles");
 const feriados = require("../utils/feriados");
+const { encolarAsignacion, programarProcesamiento } = require("../services/notificacionesService");
 
-const EMAIL_ENABLED = process.env.EMAIL_ENABLED === "true";
 const zonasValidas = ["Pavas", "Montes de Oca", "Tibás", "San Sebastián", "Uruca"];
 const tiposValidos = ["Inscripción Patronal", "Reanudación Patronal"];
 const estadosValidos = ["Pendiente", "Resuelto", "Sectorizado"];
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-});
-
 function validarId(id, res) {
   if (mongoose.isValidObjectId(id)) return true;
   res.status(400).json({ error: "Identificador de caso inválido." });
@@ -179,13 +173,11 @@ async function crearCaso(req, res) {
     });
     await nuevoCaso.save();
 
-    if (EMAIL_ENABLED) {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: usuarioInspector.correo,
-        subject: `Nuevo caso asignado: ${numeroCaso}`,
-        text: `Se le asignó el caso ${numeroCaso} de ${nombrePatrono}.`,
-      });
+    try {
+      const notificacion = await encolarAsignacion(nuevoCaso);
+      if (notificacion) programarProcesamiento();
+    } catch (error) {
+      console.error("No se pudo encolar la notificación:", error.message);
     }
     res.status(201).json(nuevoCaso);
   } catch (error) {
